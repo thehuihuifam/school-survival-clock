@@ -4,10 +4,11 @@ import { Field, SegmentedControl, SettingsSection, ToggleRow } from './settings/
 import { TimetableEditor } from './settings/TimetableEditor'
 import { HolidayEditor } from './settings/HolidayEditor'
 import { useFocusTrap } from './settings/useFocusTrap'
-import { cloneSettings, parseSettingsJson, serializeSettings } from '../lib/settings'
+import { cloneSettings, createDefaultSettings, parseSettingsJson, serializeSettings } from '../lib/settings'
+import { describeSemesterWindow, getAutoSemesterWindow } from '../lib/semesterWindow'
 import { requestNotificationPermission } from '../lib/notify'
 import { isValidDateInput, isValidTimeInput, parseDateInput, parseTimeToSeconds } from '../lib/time'
-import { DEFAULT_SETTINGS, type ThemeMode, type UserSettings } from '../types'
+import { PRE_ALERT_MINUTE_OPTIONS, type ThemeMode, type UserSettings } from '../types'
 import type { NotificationState } from '../lib/notify'
 
 interface SettingsModalProps {
@@ -68,6 +69,7 @@ export function SettingsModal({
   }, [isOpen, settings])
 
   const issues = useMemo(() => validateDraft(draft), [draft])
+  const autoWindow = useMemo(() => getAutoSemesterWindow(todayDateKey), [todayDateKey])
 
   if (!isOpen) {
     return null
@@ -144,7 +146,7 @@ export function SettingsModal({
 
   const handleReset = () => {
     if (window.confirm('모든 설정을 기본값으로 되돌릴까요? 시간표와 휴일 목록도 함께 초기화됩니다.')) {
-      setDraft(cloneSettings(DEFAULT_SETTINGS))
+      setDraft(createDefaultSettings(todayDateKey))
       setImportNote({ tone: 'ok', message: '기본값으로 되돌렸습니다. 저장 버튼을 눌러 확정하세요.' })
     }
   }
@@ -269,6 +271,31 @@ export function SettingsModal({
                     />
 
                     <ToggleRow
+                      id="pre-alert-toggle"
+                      icon="alarm-bold"
+                      title="수업 전 예비종"
+                      description="다음 교시가 시작되기 전에 미리 알려 줍니다. 예비종은 쉬는 시간·점심 전환 알림과 다른 소리로 울립니다."
+                      checked={draft.preAlertEnabled}
+                      onChange={(preAlertEnabled) => setDraft({ ...draft, preAlertEnabled })}
+                    />
+
+                    {draft.preAlertEnabled && (
+                      <div className="settings-inline-field">
+                        <span className="settings-inline-label"><SolarIcon name="stopwatch-bold" size={15} /> 예비종 시점</span>
+                        <SegmentedControl
+                          label="예비종 시점"
+                          size="sm"
+                          value={String(draft.preAlertMinutes)}
+                          options={PRE_ALERT_MINUTE_OPTIONS.map((minutes) => ({
+                            value: String(minutes),
+                            label: `${minutes}분 전`,
+                          }))}
+                          onChange={(value) => setDraft({ ...draft, preAlertMinutes: Number(value) })}
+                        />
+                      </div>
+                    )}
+
+                    <ToggleRow
                       id="notify-toggle"
                       icon="bell-ring-bold"
                       title="브라우저 알림"
@@ -317,26 +344,64 @@ export function SettingsModal({
                     description="생존 배터리는 학기 시작일부터 방학 시작일까지의 수업일 기준으로 충전됩니다."
                     icon="calendar-date-bold"
                   >
+                    <ToggleRow
+                      id="semester-auto"
+                      icon="magic-wand-3-bold"
+                      title="학사 일정 자동 맞춤"
+                      description={`오늘에 맞는 학기를 한국 학사 일정 기준으로 계산합니다. 지금 기준: ${describeSemesterWindow(autoWindow)}`}
+                      checked={draft.semesterAuto}
+                      onChange={(semesterAuto) => setDraft({
+                        ...draft,
+                        semesterAuto,
+                        ...(semesterAuto
+                          ? { semesterStart: autoWindow.startDate, vacationDate: autoWindow.vacationDate }
+                          : {}),
+                      })}
+                    />
+
                     <div className="settings-form-grid">
-                      <Field id="semester-start" label="학기 시작일" icon="calendar-date-bold" hint="배터리 0% 기준일입니다.">
+                      <Field
+                        id="semester-start"
+                        label="학기 시작일"
+                        icon="calendar-date-bold"
+                        hint={draft.semesterAuto
+                          ? `자동 계산됨 · ${draft.semesterStart}`
+                          : '배터리 0% 기준일입니다.'}
+                      >
                         <input
                           id="semester-start"
                           type="date"
                           value={draft.semesterStart}
+                          disabled={draft.semesterAuto}
                           onChange={(event) => setDraft({ ...draft, semesterStart: event.target.value })}
                           required
                         />
                       </Field>
-                      <Field id="vacation-date" label="방학 시작일" icon="calendar-mark-bold" hint="D-Day와 배터리 100% 기준일입니다.">
+                      <Field
+                        id="vacation-date"
+                        label="방학 시작일"
+                        icon="calendar-mark-bold"
+                        hint={draft.semesterAuto
+                          ? `자동 계산됨 · ${draft.vacationDate}`
+                          : 'D-Day와 배터리 100% 기준일입니다.'}
+                      >
                         <input
                           id="vacation-date"
                           type="date"
                           value={draft.vacationDate}
+                          disabled={draft.semesterAuto}
                           onChange={(event) => setDraft({ ...draft, vacationDate: event.target.value })}
                           required
                         />
                       </Field>
                     </div>
+
+                    {draft.semesterAuto && (
+                      <p className="inline-warning is-ok">
+                        <SolarIcon name="info-circle-linear" size={14} />
+                        학기 시작·방학 시각이 학교 일정과 다르면 자동 맞춤을 끄고 직접 입력해 주세요. 날짜를 직접 입력하면 자동 맞춤이 해제됩니다.
+                      </p>
+                    )}
                   </SettingsSection>
 
                   <SettingsSection
@@ -459,6 +524,19 @@ function validateDraft(draft: UserSettings): string[] {
   if (isValidDateInput(draft.semesterStart) && isValidDateInput(draft.vacationDate)
     && parseDateInput(draft.vacationDate) <= parseDateInput(draft.semesterStart)) {
     issues.push('방학 시작일은 학기 시작일보다 뒤여야 합니다.')
+  }
+  if (!Number.isFinite(Number(draft.preAlertMinutes)) || Number(draft.preAlertMinutes) < 1) {
+    issues.push('예비종 시점은 1분 이상이어야 합니다.')
+  }
+  for (const [date, override] of Object.entries(draft.dayOverrides)) {
+    if (!isValidDateInput(date)) {
+      issues.push('오늘 하루 예외의 날짜 형식이 올바르지 않습니다.')
+      break
+    }
+    if (override.kind === 'short' && !isValidTimeInput(override.dismissalTime)) {
+      issues.push('단축 수업의 하교 시각이 올바르지 않습니다.')
+      break
+    }
   }
 
   for (let weekday = 0; weekday < 7; weekday += 1) {

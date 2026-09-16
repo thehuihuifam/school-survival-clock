@@ -3,7 +3,7 @@ import { SolarIcon, type SolarIconName } from './Icon'
 import { formatDuration, formatHumanDuration } from '../lib/time'
 import { PHASE_LABELS, clockFromSeconds } from '../lib/copy'
 import type { UpcomingEvent } from '../lib/timeline'
-import type { NextDayOff, ScheduleStatus, SemesterMetrics } from '../types'
+import type { DayOverride, NextDayOff, ScheduleStatus, SemesterMetrics } from '../types'
 
 interface SnapshotCardProps {
   status: ScheduleStatus
@@ -11,6 +11,8 @@ interface SnapshotCardProps {
   dismissalTime: string
   nextDayOff: NextDayOff | null
   nextEvent: UpcomingEvent | null
+  /** Today's one-day exception, shown as its own row when it is set. */
+  override: DayOverride | null
   isOffline: boolean
 }
 
@@ -32,6 +34,7 @@ export function SnapshotCard({
   dismissalTime,
   nextDayOff,
   nextEvent,
+  override,
   isOffline,
 }: SnapshotCardProps) {
   const isDismissed = status.phase === 'dismissed'
@@ -66,8 +69,17 @@ export function SnapshotCard({
       icon: 'cup-hot-bold',
       tone: 'pale',
       label: '다음 쉼표',
-      value: nextDayOff ? `${nextDayOff.label} D-${nextDayOff.daysUntil}` : '등록된 휴일 없음',
-      status: nextDayOff ? `${formatHumanDuration(nextDayOff.secondsUntil, 2)} 남음` : '학기 일정을 확인하세요',
+      // `D-0` would read as "zero days left until the day off you are having".
+      value: nextDayOff
+        ? nextDayOff.daysUntil === 0
+          ? nextDayOff.label
+          : `${nextDayOff.label} D-${nextDayOff.daysUntil}`
+        : '등록된 휴일 없음',
+      status: nextDayOff
+        ? nextDayOff.daysUntil === 0
+          ? '오늘은 쉬는 날이에요'
+          : `${formatHumanDuration(nextDayOff.secondsUntil, 2)} 남음`
+        : '학기 일정을 확인하세요',
     },
     {
       id: 'dismissal',
@@ -86,13 +98,27 @@ export function SnapshotCard({
       id: 'vacation',
       icon: 'calendar-mark-bold',
       tone: 'warn',
-      label: '방학까지',
-      value: `D-${metrics.calendarDaysRemaining}`,
+      label: metrics.phase === 'vacation' ? '방학 진행 중' : '방학까지',
+      value: metrics.phase === 'vacation' ? '방학 중' : `D-${metrics.calendarDaysRemaining}`,
       status: metrics.phase === 'vacation'
-        ? '방학 진행 중입니다'
+        ? '수업일 계산은 개학일에 다시 시작됩니다'
         : `남은 수업일 ${metrics.schoolDaysRemaining}일 · 충전 ${metrics.progress.toFixed(0)}%`,
     },
   ]
+
+  // Only present when the teacher actually set a one-day exception.
+  if (override) {
+    rows.splice(1, 0, {
+      id: 'override',
+      icon: override.kind === 'off' ? 'moon-sleep-bold' : 'stopwatch-bold',
+      tone: 'accent',
+      label: '오늘 하루 예외',
+      value: override.kind === 'off' ? (override.label || '오늘 휴업') : (override.label || '단축 수업'),
+      status: override.kind === 'off'
+        ? '오늘은 수업 없음 · 내일 원래대로'
+        : `${override.dismissalTime} 하교 · 오늘만 적용`,
+    })
+  }
 
   return (
     <section className="surface-card snapshot-card reveal reveal-on-scroll" style={revealStyle}>

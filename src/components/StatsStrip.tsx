@@ -75,10 +75,10 @@ export function StatsStrip({ status, metrics, week }: StatsStripProps) {
     {
       id: 'vacation-dday',
       icon: 'battery-charge-bold',
-      label: '방학까지',
-      value: `D-${metrics.calendarDaysRemaining}`,
+      label: metrics.phase === 'vacation' ? '방학 진행 중' : '방학까지',
+      value: metrics.phase === 'vacation' ? '방학 중' : `D-${metrics.calendarDaysRemaining}`,
       note: metrics.phase === 'vacation'
-        ? '방학 진행 중입니다'
+        ? `개학하면 다시 세어요 · 배터리 100%`
         : `남은 수업일 ${metrics.schoolDaysRemaining}일`,
       progress: metrics.progress,
     },

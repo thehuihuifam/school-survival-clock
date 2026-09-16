@@ -10,6 +10,8 @@ interface PeriodTrackerProps {
   now: KstTimeParts
   status: ScheduleStatus
   upcoming: UpcomingEvent[]
+  /** Pre-bell window in seconds (0 = the teacher turned the cue off). */
+  preAlertSeconds: number
 }
 
 const revealStyle = { '--index': 0 } as CSSProperties
@@ -70,10 +72,11 @@ function countdownFor(event: UpcomingEvent) {
   return `${formatHumanDuration(event.secondsFromNow, 2)} 후`
 }
 
-export function PeriodTracker({ now, status, upcoming }: PeriodTrackerProps) {
+export function PeriodTracker({ now, status, upcoming, preAlertSeconds }: PeriodTrackerProps) {
   const layout = useMemo(() => layoutTimeline(status.outline, now.daySeconds), [status.outline, now.daySeconds])
   const headline = slotHeadline(status)
   const isEmpty = layout.items.length === 0
+  const isOffDay = status.phase === 'off-day'
 
   return (
     <section className="surface-card period-card reveal reveal-on-scroll" style={revealStyle}>
@@ -118,13 +121,23 @@ export function PeriodTracker({ now, status, upcoming }: PeriodTrackerProps) {
           </div>
 
           {isEmpty ? (
-            <div className="timeline-empty">
-              <SolarIcon name="calendar-add-bold" size={20} />
-              <div>
-                <p>표시할 시간표가 없습니다</p>
-                <span>설정 → 시간표에서 이 요일의 교시를 추가하거나 프리셋을 적용해 보세요.</span>
+            isOffDay ? (
+              <div className="timeline-empty is-rest">
+                <SolarIcon name="moon-stars-bold" size={20} />
+                <div>
+                  <p>오늘은 수업이 없어요</p>
+                  <span>{status.day.label} · {status.day.description}</span>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="timeline-empty">
+                <SolarIcon name="calendar-add-bold" size={20} />
+                <div>
+                  <p>표시할 시간표가 없습니다</p>
+                  <span>설정 → 시간표에서 이 요일의 교시를 추가하거나 프리셋을 적용해 보세요.</span>
+                </div>
+              </div>
+            )
           ) : (
             <div className="timeline-scroll" tabIndex={0} role="group" aria-label="오늘의 시간표 타임라인">
               <div className="timeline-track">
@@ -189,21 +202,35 @@ export function PeriodTracker({ now, status, upcoming }: PeriodTrackerProps) {
             <p className="rail-empty">등록된 다음 일정이 없습니다.</p>
           ) : (
             <ol className="rail-list">
-              {upcoming.map((event) => (
-                <li className={`rail-item kind-${event.kind} ${event.isActive ? 'is-active' : ''}`} key={event.id}>
-                  <span className="rail-icon" aria-hidden="true"><SolarIcon name={SLOT_ICONS[event.kind]} size={14} /></span>
-                  <div className="rail-copy">
-                    <strong>{event.label}</strong>
-                    <span>{event.isToday ? event.timeLabel : `${event.dayLabel} · ${event.timeLabel}`}</span>
-                  </div>
-                  <span className="rail-countdown">{countdownFor(event)}</span>
-                </li>
-              ))}
+              {upcoming.map((event) => {
+                const isImminent = !event.isActive
+                  && preAlertSeconds > 0
+                  && event.secondsFromNow > 0
+                  && event.secondsFromNow <= preAlertSeconds
+                return (
+                  <li
+                    className={`rail-item kind-${event.kind} ${event.isActive ? 'is-active' : ''} ${isImminent ? 'is-imminent' : ''}`}
+                    key={event.id}
+                  >
+                    <span className="rail-icon" aria-hidden="true"><SolarIcon name={SLOT_ICONS[event.kind]} size={14} /></span>
+                    <div className="rail-copy">
+                      <strong>{event.label}</strong>
+                      <span>{event.isToday ? event.timeLabel : `${event.dayLabel} · ${event.timeLabel}`}</span>
+                      {isImminent && (
+                        <span className="rail-imminent-chip">
+                          <SolarIcon name="bell-ring-bold" size={11} /> 곧 시작 · 예비종
+                        </span>
+                      )}
+                    </div>
+                    <span className="rail-countdown">{countdownFor(event)}</span>
+                  </li>
+                )
+              })}
             </ol>
           )}
           <p className="rail-note">
             <SolarIcon name="bell-ring-bold" size={13} />
-            교시 시작·쉬는 시간·하교 순간에 소리와 브라우저 알림을 받을 수 있어요.
+            교시 시작·쉬는 시간·하교 순간에 알림이 울리고, 수업 {preAlertSeconds > 0 ? `${Math.round(preAlertSeconds / 60)}분 전에는 예비종` : '전 예비종'}이 함께 울립니다.
           </p>
         </aside>
       </div>

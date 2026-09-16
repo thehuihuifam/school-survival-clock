@@ -9,7 +9,7 @@ import { SettingsModal } from './components/SettingsModal'
 import { SnapshotCard } from './components/SnapshotCard'
 import { StatsStrip } from './components/StatsStrip'
 import { SolarIcon } from './components/Icon'
-import { detectScheduleEvent, dispatchScheduleEvent } from './lib/alerts'
+import { detectPreAlert, detectScheduleEvent, dispatchPreAlert, dispatchScheduleEvent } from './lib/alerts'
 import { documentTitleFor, greetingForHour } from './lib/copy'
 import { getNotificationState, requestNotificationPermission } from './lib/notify'
 import { subscribeInstallPrompt, type InstallPrompt } from './lib/pwa'
@@ -21,14 +21,15 @@ import {
   type WeekContext,
 } from './lib/schedule'
 import { getSemesterMetrics } from './lib/semester'
-import { loadSettings, saveSettings, subscribeToExternalSettings } from './lib/settings'
+import { getAutoSemesterWindow } from './lib/semesterWindow'
+import { loadSettings, normalizeSettings, saveSettings, subscribeToExternalSettings } from './lib/settings'
 import { chimeEngine } from './lib/sound'
 import { useResolvedTheme } from './lib/theme'
 import { getKstTimeParts, secondsUntilDateKey } from './lib/time'
 import { getUpcomingEvents } from './lib/timeline'
 import { useNow } from './lib/useNow'
 import { useRevealOnScroll } from './lib/reveal'
-import type { NextDayOff, NextSchoolDay, ThemeMode, UserSettings } from './types'
+import type { DayOverride, NextDayOff, NextSchoolDay, ThemeMode, UserSettings } from './types'
 
 const CONFETTI_COLORS = ['#34d399', '#6ee7b7', '#a7f3d0', '#d1fae5', '#10b981']
 const CELEBRATION_MS = 12000
@@ -52,6 +53,12 @@ function App() {
   const previousPhaseKeyRef = useRef<string | null>(null)
   const celebratedKeyRef = useRef<string | null>(null)
   const celebrationTimeoutRef = useRef<number | undefined>(undefined)
+  // Pre-bell bookkeeping: `initialized` keeps a page load from chiming for a
+  // class that is already imminent, `lastKey` dedupes the cue per phase.
+  const preAlertRef = useRef<{ initialized: boolean; lastKey: string | null }>({
+    initialized: false,
+    lastKey: null,
+  })
 
   useRevealOnScroll()
 
@@ -120,6 +127,10 @@ function App() {
     () => getUpcomingEvents(kstNow, settings, status, nextSchoolDay, 4),
     [kstNow, settings, status, nextSchoolDay],
   )
+
+  /** 0 disables the pre-bell state and cue entirely. */
+  const preAlertSeconds = settings.preAlertEnabled ? settings.preAlertMinutes * 60 : 0
+  const todayOverride: DayOverride | null = settings.dayOverrides[kstNow.dateKey] ?? null
 
   /* ---------------------------------------------------------------- *
    * Side effects
@@ -225,6 +236,48 @@ function App() {
       })
   }, [])
 
+  // 예비종: a single "get ready" cue when the next class enters the window.
+  useEffect(() => {
+    const tracker = preAlertRef.current
+    if (!tracker.initialized) {
+      tracker.initialized = true
+      tracker.lastKey = `${status.phaseKey}:pre-bell`
+      return
+    }
+
+    const event = detectPreAlert(status, preAlertSeconds, tracker.lastKey)
+    if (!event) {
+      return
+    }
+    tracker.lastKey = event.key
+    dispatchPreAlert(event, { sound: settings.soundEnabled, notify: settings.notifyEnabled })
+  }, [status, preAlertSeconds, settings.soundEnabled, settings.notifyEnabled])
+
+  // An automatically managed semester window has to follow the KST date even
+  // when the tab is never reloaded (a desk dashboard can stay open for weeks).
+  useEffect(() => {
+    setSettings((current) => {
+      if (!current.semesterAuto) {
+        return current
+      }
+      const window = getAutoSemesterWindow(kstNow.dateKey)
+      if (current.semesterStart === window.startDate && current.vacationDate === window.vacationDate) {
+        return current
+      }
+      return { ...current, semesterStart: window.startDate, vacationDate: window.vacationDate }
+    })
+  }, [kstNow.dateKey])
+
+  // Expired one-day exceptions are dropped as soon as the date rolls over.
+  useEffect(() => {
+    setSettings((current) => {
+      const pruned = normalizeSettings(current, kstNow.dateKey)
+      return Object.keys(pruned.dayOverrides).length === Object.keys(current.dayOverrides).length
+        ? current
+        : pruned
+    })
+  }, [kstNow.dateKey])
+
   useEffect(() => {
     const previousPhaseKey = previousPhaseKeyRef.current
     previousPhaseKeyRef.current = status.phaseKey
@@ -273,6 +326,19 @@ function App() {
     setNotificationState(getNotificationState())
     chimeEngine.play('ui')
   }
+
+  const handleOverrideChange = useCallback((nextOverride: DayOverride | null) => {
+    setSettings((current) => {
+      const dayOverrides = { ...current.dayOverrides }
+      if (nextOverride) {
+        dayOverrides[kstNow.dateKey] = nextOverride
+      } else {
+        delete dayOverrides[kstNow.dateKey]
+      }
+      return { ...current, dayOverrides }
+    })
+    chimeEngine.play('ui')
+  }, [kstNow.dateKey])
 
   const handleCycleTheme = useCallback(() => {
     setSettings((current) => {
@@ -433,13 +499,17 @@ function App() {
               displayName={settings.displayName}
               status={status}
               nextSchoolDay={nextSchoolDay}
+              preAlertSeconds={preAlertSeconds}
+              override={todayOverride}
+              dismissalTime={settings.dismissalTime}
+              onOverrideChange={handleOverrideChange}
             />
             <BatteryCard metrics={metrics} isTodaySchoolDay={status.day.isSchoolDay && status.day.hasClasses} />
           </section>
 
           <StatsStrip status={status} metrics={metrics} week={week} />
 
-          <PeriodTracker now={kstNow} status={status} upcoming={upcoming} />
+          <PeriodTracker now={kstNow} status={status} upcoming={upcoming} preAlertSeconds={preAlertSeconds} />
 
           <section className="lower-grid" aria-label="응원 메시지와 요약">
             <QuoteCard />
@@ -449,6 +519,7 @@ function App() {
               dismissalTime={settings.dismissalTime}
               nextDayOff={nextDayOff}
               nextEvent={upcoming[0] ?? null}
+              override={todayOverride}
               isOffline={isOffline}
             />
           </section>

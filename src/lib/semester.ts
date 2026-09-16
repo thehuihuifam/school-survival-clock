@@ -16,11 +16,14 @@ import {
 } from './time'
 import {
   isBeforeSemester,
+  isDayOffOverride,
   isInVacation,
   isHolidayDate,
   isSchoolWeekday,
+  semesterWindowFor,
   weekdayHasClasses,
 } from './schedule'
+import { isValidSemesterRange } from './semesterWindow'
 import { weekdayIndexFromDateKey } from './time'
 
 /**
@@ -43,6 +46,10 @@ export function countSchoolDays(settings: UserSettings, fromDateKey: string, toD
     if (isHolidayDate(settings, dateKey)) {
       continue
     }
+    // A day the teacher marked as "오늘 휴업" is not a teaching day either.
+    if (isDayOffOverride(settings, dateKey)) {
+      continue
+    }
     if (!weekdayHasClasses(settings, weekdayIndexFromDateKey(dateKey))) {
       continue
     }
@@ -52,15 +59,17 @@ export function countSchoolDays(settings: UserSettings, fromDateKey: string, toD
 }
 
 export function getSemesterMetrics(now: KstTimeParts, settings: UserSettings): SemesterMetrics {
-  const startMs = parseDateInput(settings.semesterStart)
-  const vacationMs = parseDateInput(settings.vacationDate)
+  // The window that governs *today* — automatic on the Korean school calendar,
+  // or the teacher's own dates when they turned the automation off.
+  const window = semesterWindowFor(settings, now.dateKey)
+  const startDate = window.startDate
+  const vacationDate = window.vacationDate
+  const startMs = parseDateInput(startDate)
+  const vacationMs = parseDateInput(vacationDate)
   const todayMs = parseDateInput(now.dateKey)
   // A vacation date on/before the semester start would invert the battery, so
   // the pair is treated as "not configured" and the gauge rests at zero.
-  const isConfigured = Number.isFinite(startMs)
-    && Number.isFinite(vacationMs)
-    && Number.isFinite(todayMs)
-    && vacationMs > startMs
+  const isConfigured = Number.isFinite(todayMs) && isValidSemesterRange(startDate, vacationDate)
 
   if (!isConfigured) {
     return {
@@ -72,8 +81,8 @@ export function getSemesterMetrics(now: KstTimeParts, settings: UserSettings): S
       elapsedSchoolDays: 0,
       totalCalendarDays: 0,
       elapsedCalendarDays: 0,
-      startDate: settings.semesterStart,
-      vacationDate: settings.vacationDate,
+      startDate,
+      vacationDate,
       isConfigured: false,
     }
   }
@@ -87,19 +96,15 @@ export function getSemesterMetrics(now: KstTimeParts, settings: UserSettings): S
       : 'in-semester'
 
   const totalCalendarDays = Math.max(0, differenceInDays(vacationMs, startMs))
-  const totalSchoolDays = vacationMs > startMs ? countSchoolDays(settings, settings.semesterStart, settings.vacationDate) : 0
+  const totalSchoolDays = vacationMs > startMs ? countSchoolDays(settings, startDate, vacationDate) : 0
 
   // Elapsed counts [start, today); remaining counts [today, vacation).
   const elapsedAnchorMs = clamp(todayMs, startMs, vacationMs)
-  const elapsedSchoolDays = countSchoolDays(
-    settings,
-    settings.semesterStart,
-    dateKeyFromUtcMs(elapsedAnchorMs),
-  )
+  const elapsedSchoolDays = countSchoolDays(settings, startDate, dateKeyFromUtcMs(elapsedAnchorMs))
   const schoolDaysRemaining = countSchoolDays(
     settings,
     dateKeyFromUtcMs(Math.max(todayMs, startMs)),
-    settings.vacationDate,
+    vacationDate,
   )
 
   const progress = phase === 'vacation'
@@ -117,8 +122,8 @@ export function getSemesterMetrics(now: KstTimeParts, settings: UserSettings): S
     elapsedSchoolDays,
     totalCalendarDays,
     elapsedCalendarDays: clamp(differenceInDays(todayMs, startMs), 0, totalCalendarDays),
-    startDate: settings.semesterStart,
-    vacationDate: settings.vacationDate,
+    startDate,
+    vacationDate,
     isConfigured: true,
   }
 }

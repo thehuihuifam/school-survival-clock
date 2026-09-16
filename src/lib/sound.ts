@@ -13,6 +13,7 @@ export type ChimeKind =
   | 'lunch-started'
   | 'duty-started'
   | 'dismissed'
+  | 'pre-bell'
   | 'ui'
 
 interface Voice {
@@ -64,6 +65,9 @@ const RECIPES: Record<ChimeKind, Voice[]> = {
     ...bell(NOTE.C6, 0.34, 1.5, 0.42),
     ...bell(NOTE.E6, 0.16, 1.7, 0.56),
   ],
+  // 예비종: a quiet, falling two-note cue that reads as "get ready" without
+  // competing with the real transition bells above.
+  'pre-bell': [...bell(NOTE.G5, 0.2, 0.5), ...bell(NOTE.D5, 0.18, 0.85, 0.16)],
   // Barely-there click for interactive feedback.
   ui: [{ frequency: 1180, gain: 0.07, decay: 0.09, type: 'triangle' }],
 }
