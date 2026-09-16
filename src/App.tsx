@@ -1,10 +1,10 @@
 import confetti from 'canvas-confetti'
-import { ArrowUpRight, HeartHandshake } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { AppHeader } from './components/AppHeader'
 import { BatteryCard } from './components/BatteryCard'
 import { CelebrationToast } from './components/CelebrationToast'
 import { ClockHero } from './components/ClockHero'
+import { SolarIcon } from './components/Icon'
 import { PeriodTracker } from './components/PeriodTracker'
 import { QuoteCard } from './components/QuoteCard'
 import { SettingsModal } from './components/SettingsModal'
@@ -18,7 +18,13 @@ import {
   parseTimeToSeconds,
 } from './lib/time'
 import { loadSettings, saveSettings } from './lib/storage'
+import { useRevealOnScroll } from './lib/reveal'
 import type { UserSettings } from './types'
+
+const CONFETTI_COLORS = ['#34d399', '#6ee7b7', '#a7f3d0', '#d1fae5', '#10b981']
+
+const introRevealStyle = { '--index': 1 } as CSSProperties
+const footerRevealStyle = { '--index': 3 } as CSSProperties
 
 function App() {
   const [settings, setSettings] = useState<UserSettings>(loadSettings)
@@ -29,6 +35,8 @@ function App() {
   const previousMomentRef = useRef<{ dateKey: string; seconds: number } | null>(null)
   const celebratedKeyRef = useRef<string | null>(null)
   const celebrationTimeoutRef = useRef<number | undefined>(undefined)
+
+  useRevealOnScroll()
 
   useEffect(() => {
     const interval = window.setInterval(() => setNow(new Date()), 1000)
@@ -66,7 +74,7 @@ function App() {
       startVelocity: 35,
       scalar: 1.05,
       origin: { y: 0.65 },
-      colors: ['#c8ff58', '#5eead4', '#fbbf24', '#fb7185', '#a78bfa'],
+      colors: CONFETTI_COLORS,
     })
     window.setTimeout(() => {
       void confetti({
@@ -75,7 +83,7 @@ function App() {
         startVelocity: 24,
         scalar: 0.8,
         origin: { x: 0.15, y: 0.8 },
-        colors: ['#c8ff58', '#f0abfc', '#38bdf8'],
+        colors: CONFETTI_COLORS,
       })
       void confetti({
         particleCount: 80,
@@ -83,7 +91,7 @@ function App() {
         startVelocity: 24,
         scalar: 0.8,
         origin: { x: 0.85, y: 0.8 },
-        colors: ['#fbbf24', '#fb7185', '#818cf8'],
+        colors: CONFETTI_COLORS,
       })
     }, 180)
   }, [])
@@ -145,7 +153,7 @@ function App() {
 
   return (
     <div className={`app-shell theme-${settings.theme}`}>
-      <div className="background-grid" aria-hidden="true" />
+      <div className="background-mesh" aria-hidden="true" />
       <div className="page-wrap">
         <AppHeader
           theme={settings.theme}
@@ -156,12 +164,12 @@ function App() {
         />
 
         <main>
-          <section className="dashboard-intro">
+          <section className="dashboard-intro reveal" style={introRevealStyle}>
             <div>
               <p className="intro-kicker">A LITTLE POWER FOR A BIG DAY</p>
               <h2>오늘도 무사히, 선생님.</h2>
             </div>
-            <div className="intro-side-note"><HeartHandshake size={16} /> 선생님의 하루를 응원하는 중</div>
+            <div className="intro-side-note"><SolarIcon name="hand-heart-bold" size={16} /> 선생님의 하루를 응원하는 중</div>
           </section>
 
           <section className="hero-grid">
@@ -182,13 +190,19 @@ function App() {
           </section>
         </main>
 
-        <footer className="app-footer">
+        <footer className="app-footer reveal reveal-on-scroll" style={footerRevealStyle}>
           <span>교사 생존 배터리 <b>·</b> {kstNow.year} desk edition</span>
-          <span>오늘도 충분히 잘하고 있어요 <ArrowUpRight size={14} /></span>
+          <span>오늘도 충분히 잘하고 있어요 <SolarIcon name="arrow-right-up-linear" size={14} /></span>
         </footer>
       </div>
 
-      <CelebrationToast isVisible={isCelebrationVisible} onClose={() => setIsCelebrationVisible(false)} />
+      <div className="grain-overlay" aria-hidden="true" />
+
+      <CelebrationToast
+        isVisible={isCelebrationVisible}
+        dismissalTime={settings.dismissalTime}
+        onClose={() => setIsCelebrationVisible(false)}
+      />
       <SettingsModal
         isOpen={isSettingsOpen}
         settings={settings}

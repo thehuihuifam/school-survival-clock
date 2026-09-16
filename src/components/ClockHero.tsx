@@ -1,5 +1,6 @@
-import { AlarmClock, CalendarDays, Check, MapPin, Sparkles } from 'lucide-react'
+import type { CSSProperties } from 'react'
 import { formatDuration, formatKstDate, formatKstTime } from '../lib/time'
+import { SolarIcon } from './Icon'
 import type { KstTimeParts } from '../types'
 
 interface ClockHeroProps {
@@ -8,6 +9,8 @@ interface ClockHeroProps {
   dismissalTime: string
   countdownSeconds: number
 }
+
+const revealStyle = { '--index': 2 } as CSSProperties
 
 export function ClockHero({
   now,
@@ -19,15 +22,15 @@ export function ClockHero({
     (now.hour * 60 + now.minute >= Number(dismissalTime.split(':')[0]) * 60 + Number(dismissalTime.split(':')[1]))
 
   return (
-    <section className="surface-card clock-card">
-      <div className="card-orb orb-lime" />
-      <div className="card-orb orb-cyan" />
+    <section className="surface-card clock-card reveal" style={revealStyle}>
+      <div className="card-orb orb-accent" />
+      <div className="card-orb orb-deep" />
       <div className="card-heading-row">
         <div>
           <p className="eyebrow"><span className="eyebrow-dot" /> LIVE CLOCK · ASIA/SEOUL</p>
           <p className="card-subtitle">오늘의 교실 레이더</p>
         </div>
-        <div className="timezone-badge"><MapPin size={13} /> KST</div>
+        <div className="timezone-badge"><SolarIcon name="point-on-map-bold" size={13} /> KST</div>
       </div>
 
       <div className="clock-display" aria-label={`현재 시각 ${formatKstTime(now)}`}>
@@ -35,14 +38,16 @@ export function ClockHero({
         <span className="clock-seconds-label">NOW</span>
       </div>
       <div className="date-line">
-        <CalendarDays size={16} />
+        <SolarIcon name="calendar-bold" size={16} />
         <span>{formatKstDate(now)}</span>
       </div>
 
       <div className={`countdown-panel ${hasDismissed ? 'countdown-complete' : ''}`}>
         <div className="countdown-copy">
           <div className="countdown-icon">
-            {hasDismissed ? <Check size={18} strokeWidth={2.5} /> : <AlarmClock size={18} />}
+            {hasDismissed
+              ? <SolarIcon name="check-circle-bold" size={18} />
+              : <SolarIcon name="alarm-bold" size={18} />}
           </div>
           <div>
             <p className="countdown-label">오늘 퇴근(하교)까지 남은 시간</p>
@@ -62,7 +67,7 @@ export function ClockHero({
             <strong>{displayName || '오늘도 빛나는 선생님'}</strong>
           </div>
         </div>
-        <div className="tiny-status"><Sparkles size={14} /> 무사 생존 모드</div>
+        <div className="tiny-status"><SolarIcon name="stars-minimalistic-bold" size={14} /> 무사 생존 모드</div>
       </div>
     </section>
   )

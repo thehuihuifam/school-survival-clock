@@ -1,5 +1,6 @@
-import { Coffee, GraduationCap, Info, Utensils } from 'lucide-react'
+import type { CSSProperties } from 'react'
 import { getTimelineSlots } from '../lib/time'
+import { SolarIcon } from './Icon'
 import type { KstTimeParts, PeriodStatus } from '../types'
 
 interface PeriodTrackerProps {
@@ -8,15 +9,17 @@ interface PeriodTrackerProps {
   status: PeriodStatus
 }
 
+const revealStyle = { '--index': 0 } as CSSProperties
+
 export function PeriodTracker({ now, dismissalTime, status }: PeriodTrackerProps) {
   const slots = getTimelineSlots(dismissalTime)
   const clockMinutes = now.hour * 60 + now.minute
 
   return (
-    <section className="surface-card period-card">
+    <section className="surface-card period-card reveal reveal-on-scroll" style={revealStyle}>
       <div className="period-header">
         <div>
-          <p className="eyebrow"><span className="eyebrow-dot blue" /> CLASSROOM RADAR</p>
+          <p className="eyebrow"><span className="eyebrow-dot soft" /> CLASSROOM RADAR</p>
           <h2>현재 교시 안내 바</h2>
           <p className="card-subtitle">시간표 위에 마우스를 올리면 오늘의 리듬이 보여요.</p>
         </div>
@@ -29,7 +32,11 @@ export function PeriodTracker({ now, dismissalTime, status }: PeriodTrackerProps
 
       <div className="period-current-note">
         <div className="period-note-icon">
-          {status.isBreak ? <Coffee size={18} /> : status.slotId === 'lunch' ? <Utensils size={18} /> : <GraduationCap size={18} />}
+          {status.isBreak
+            ? <SolarIcon name="cup-hot-bold" size={18} />
+            : status.slotId === 'lunch'
+              ? <SolarIcon name="plate-bold" size={18} />
+              : <SolarIcon name="notebook-bold" size={18} />}
         </div>
         <div>
           <p className="period-note-title">
@@ -55,7 +62,11 @@ export function PeriodTracker({ now, dismissalTime, status }: PeriodTrackerProps
                 title={`${slot.label} · ${slot.timeLabel}`}
               >
                 <div className="timeline-slot-top">
-                  {slot.kind === 'break' ? <Coffee size={13} /> : slot.id === 'lunch' ? <Utensils size={13} /> : <span className="period-number">{slot.shortLabel}</span>}
+                  {slot.kind === 'break'
+                    ? <SolarIcon name="cup-hot-linear" size={13} />
+                    : slot.id === 'lunch'
+                      ? <SolarIcon name="plate-linear" size={13} />
+                      : <span className="period-number">{slot.shortLabel}</span>}
                   <span>{slot.label}</span>
                 </div>
                 <span className="timeline-time">{slot.timeLabel}</span>
@@ -66,7 +77,10 @@ export function PeriodTracker({ now, dismissalTime, status }: PeriodTrackerProps
         </div>
       </div>
 
-      <div className="period-legend"><Info size={14} /> 시간표 기준은 한국 표준시(KST)이며, 방과후/업무 시간은 설정한 퇴근 시각까지 표시됩니다.</div>
+      <div className="period-legend">
+        <SolarIcon name="info-circle-linear" size={14} />
+        시간표 기준은 한국 표준시(KST)이며, 방과후/업무 시간은 설정한 퇴근 시각까지 표시됩니다.
+      </div>
     </section>
   )
 }

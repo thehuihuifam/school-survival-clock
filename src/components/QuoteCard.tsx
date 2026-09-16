@@ -1,5 +1,5 @@
-import { MessageCircleHeart, RefreshCcw, Sparkles } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
+import { SolarIcon } from './Icon'
 
 const TEACHER_QUOTES = [
   '선생님, 4교시만 끝나면 급식입니다. 힘내세요!',
@@ -16,6 +16,8 @@ function getInitialQuoteIndex() {
   const halfHourBucket = Math.floor(Date.now() / (30 * 60 * 1000))
   return halfHourBucket % TEACHER_QUOTES.length
 }
+
+const revealStyle = { '--index': 1 } as CSSProperties
 
 export function QuoteCard() {
   const [quoteIndex, setQuoteIndex] = useState(getInitialQuoteIndex)
@@ -39,16 +41,16 @@ export function QuoteCard() {
   }, [])
 
   return (
-    <section className="surface-card quote-card">
+    <section className="surface-card quote-card reveal reveal-on-scroll" style={revealStyle}>
       <div className="quote-card-header">
         <div className="quote-title-lockup">
-          <div className="section-icon quote-icon"><MessageCircleHeart size={19} /></div>
+          <div className="section-icon quote-icon"><SolarIcon name="chat-round-like-bold" size={19} /></div>
           <div>
             <p className="eyebrow">TEACHER EMPATHY VITAMIN</p>
             <h2>선생님 공감 비타민</h2>
           </div>
         </div>
-        <Sparkles className="quote-sparkle" size={21} />
+        <SolarIcon name="stars-minimalistic-bold" size={21} className="quote-sparkle" />
       </div>
 
       <div className="quote-body">
@@ -60,7 +62,7 @@ export function QuoteCard() {
       <div className="quote-footer">
         <span><span className="quote-live-dot" /> 30분마다 새로운 응원</span>
         <button className="refresh-button" type="button" onClick={refreshQuote}>
-          <RefreshCcw size={15} className={isRefreshing ? 'spin-once' : ''} />
+          <SolarIcon name="refresh-bold" size={15} className={isRefreshing ? 'spin-once' : ''} />
           공감 한마디 새로고침
         </button>
       </div>
