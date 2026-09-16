@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { SolarIcon } from '../Icon'
-import { formatDateKeyWithWeekday, isValidDateInput } from '../../lib/time'
+import { formatDateKeyWithWeekday, isValidDateInput, pad } from '../../lib/time'
 import type { Holiday } from '../../types'
 
 interface HolidayEditorProps {
@@ -26,8 +26,6 @@ const FIXED_HOLIDAYS: Array<{ month: number; day: number; label: string }> = [
   { month: 10, day: 9, label: '한글날' },
   { month: 12, day: 25, label: '성탄절' },
 ]
-
-const pad = (value: number) => String(value).padStart(2, '0')
 
 export function HolidayEditor({ holidays, todayDateKey, semesterStart, vacationDate, onChange }: HolidayEditorProps) {
   const [date, setDate] = useState('')

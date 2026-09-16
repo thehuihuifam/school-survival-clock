@@ -1,7 +1,7 @@
 import { useMemo, type CSSProperties } from 'react'
 import { SolarIcon, type SolarIconName } from './Icon'
-import { formatDuration, formatHumanDuration, formatMinutes } from '../lib/time'
-import { PHASE_LABELS, clockFromSeconds } from '../lib/copy'
+import { formatDuration, formatHmFromSeconds, formatHumanDuration, formatMinutes } from '../lib/time'
+import { PHASE_LABELS } from '../lib/copy'
 import { layoutTimeline } from '../lib/timeline'
 import type { UpcomingEvent } from '../lib/timeline'
 import type { KstTimeParts, ScheduleStatus, SlotKind } from '../types'
@@ -39,7 +39,7 @@ function slotHeadline(status: ScheduleStatus) {
   if (phase === 'dismissed') {
     return {
       title: '오늘의 교실 미션 완료',
-      detail: `${clockFromSeconds(status.outline.dismissalSeconds)} 하교 · ${status.totalClassCount}교시 모두 마쳤습니다`,
+      detail: `${formatHmFromSeconds(status.outline.dismissalSeconds)} 하교 · ${status.totalClassCount}교시 모두 마쳤습니다`,
     }
   }
   if (phase === 'before-first-slot' && nextSlot) {
@@ -116,7 +116,7 @@ export function PeriodTracker({ now, status, upcoming, preAlertSeconds }: Period
             </div>
             <div className="period-clock-mini" aria-hidden="true">
               <span>NOW</span>
-              {clockFromSeconds(now.daySeconds)}
+              {formatHmFromSeconds(now.daySeconds)}
             </div>
           </div>
 
@@ -169,9 +169,9 @@ export function PeriodTracker({ now, status, upcoming, preAlertSeconds }: Period
                 )}
               </div>
               <div className="timeline-scale" aria-hidden="true">
-                <span>{clockFromSeconds(layout.firstStartSeconds ?? 0)} 시작</span>
+                <span>{formatHmFromSeconds(layout.firstStartSeconds ?? 0)} 시작</span>
                 <span className="timeline-scale-mid">수업 {formatMinutes(status.outline.totalClassSeconds)} · 쉬는 시간 {formatMinutes(status.outline.totalBreakSeconds)}</span>
-                <span>{clockFromSeconds(layout.dismissalSeconds)} 하교</span>
+                <span>{formatHmFromSeconds(layout.dismissalSeconds)} 하교</span>
               </div>
             </div>
           )}

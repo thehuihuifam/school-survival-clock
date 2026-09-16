@@ -7,7 +7,6 @@
  * everything here is covered by unit tests in `src/lib/__tests__`.
  */
 import {
-  PERIOD_KIND_LABELS,
   WEEKDAY_LONG_LABELS,
   type DayContext,
   type DayOutline,
@@ -18,16 +17,15 @@ import {
   type NextDayOff,
   type NextSchoolDay,
   type ScheduleStatus,
-  type SlotKind,
   type TimetablePeriod,
   type UserSettings,
 } from '../types'
 import { getAutoSemesterWindow, type SemesterWindow } from './semesterWindow'
 import {
   DAY_IN_SECONDS,
-  HOUR_IN_SECONDS,
   clamp,
   formatDateKeyShort,
+  formatHmFromSeconds,
   isValidDateInput,
   isValidTimeInput,
   parseDateInput,
@@ -39,9 +37,9 @@ import {
 } from './time'
 
 /** Gaps shorter than this are treated as back-to-back blocks (no break slot). */
-export const MIN_BREAK_SECONDS = 5 * 60
+const MIN_BREAK_SECONDS = 5 * 60
 /** A duty tail shorter than this is folded into the last block instead. */
-export const MIN_DUTY_SECONDS = 10 * 60
+const MIN_DUTY_SECONDS = 10 * 60
 
 const EMPTY_OUTLINE: DayOutline = {
   slots: [],
@@ -151,7 +149,7 @@ export function sanitizePeriods(periods: TimetablePeriod[]): TimetablePeriod[] {
   return kept
 }
 
-export function shortLabelFor(period: TimetablePeriod, classOrdinal: number) {
+function shortLabelFor(period: TimetablePeriod, classOrdinal: number) {
   if (period.kind === 'lunch') {
     return '점심'
   }
@@ -162,13 +160,6 @@ export function shortLabelFor(period: TimetablePeriod, classOrdinal: number) {
     return '업무'
   }
   return String(classOrdinal)
-}
-
-export function slotKindLabel(kind: SlotKind) {
-  if (kind === 'break') {
-    return '쉬는 시간'
-  }
-  return PERIOD_KIND_LABELS[kind]
 }
 
 /* ------------------------------------------------------------------ *
@@ -205,7 +196,7 @@ export function buildOutline(
         kind: 'break',
         startSeconds: previousEnd,
         endSeconds: startSeconds,
-        timeLabel: `${formatClockSeconds(previousEnd)} ~ ${formatClockSeconds(startSeconds)}`,
+        timeLabel: `${formatHmFromSeconds(previousEnd)} ~ ${formatHmFromSeconds(startSeconds)}`,
         classIndex: null,
       })
     }
@@ -239,7 +230,7 @@ export function buildOutline(
       kind: 'duty',
       startSeconds: lastPeriodEndSeconds,
       endSeconds: dismissalSeconds,
-      timeLabel: `${formatClockSeconds(lastPeriodEndSeconds)} ~ ${formatClockSeconds(dismissalSeconds)}`,
+      timeLabel: `${formatHmFromSeconds(lastPeriodEndSeconds)} ~ ${formatHmFromSeconds(dismissalSeconds)}`,
       classIndex: null,
     })
   }
@@ -279,15 +270,10 @@ function truncatePeriods(periods: TimetablePeriod[], hardStopSeconds?: number): 
     truncated.push(
       endSeconds === parseTimeToSeconds(period.end)
         ? period
-        : { ...period, end: formatClockSeconds(endSeconds) },
+        : { ...period, end: formatHmFromSeconds(endSeconds) },
     )
   }
   return truncated
-}
-
-function formatClockSeconds(totalSeconds: number) {
-  const safe = Math.max(0, Math.floor(totalSeconds))
-  return `${String(Math.floor(safe / HOUR_IN_SECONDS)).padStart(2, '0')}:${String(Math.floor((safe % HOUR_IN_SECONDS) / 60)).padStart(2, '0')}`
 }
 
 /* ------------------------------------------------------------------ *
@@ -443,7 +429,7 @@ export function getDayContext(now: KstTimeParts, settings: UserSettings, outline
     }
   }
 
-  const dismissalLabel = formatClockSeconds(resolvedOutline.dismissalSeconds)
+  const dismissalLabel = formatHmFromSeconds(resolvedOutline.dismissalSeconds)
   return {
     dayType: 'school',
     label: '학교 가는 날',

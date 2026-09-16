@@ -13,6 +13,7 @@ import {
   dateKeyFromUtcMs,
   differenceInDays,
   parseDateInput,
+  weekdayIndexFromDateKey,
 } from './time'
 import {
   isBeforeSemester,
@@ -24,7 +25,6 @@ import {
   weekdayHasClasses,
 } from './schedule'
 import { isValidSemesterRange } from './semesterWindow'
-import { weekdayIndexFromDateKey } from './time'
 
 /**
  * Count teaching days in `[fromDateKey, toDateKey)` — half-open so the

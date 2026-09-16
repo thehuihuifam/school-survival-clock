@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { ResolvedTheme, ThemeMode } from '../types'
 
 /** Keep in sync with the inline bootstrap in `index.html`. */
-export const THEME_ATTRIBUTE = 'data-theme'
+const THEME_ATTRIBUTE = 'data-theme'
 const THEME_COLOR_BY_THEME: Record<ResolvedTheme, string> = {
   dark: '#09090b',
   light: '#f6f7f5',
@@ -15,7 +15,7 @@ function prefersDarkColorScheme() {
   return window.matchMedia('(prefers-color-scheme: dark)').matches
 }
 
-export function resolveTheme(mode: ThemeMode, systemPrefersDark = prefersDarkColorScheme()): ResolvedTheme {
+function resolveTheme(mode: ThemeMode, systemPrefersDark = prefersDarkColorScheme()): ResolvedTheme {
   if (mode === 'system') {
     return systemPrefersDark ? 'dark' : 'light'
   }
@@ -23,7 +23,7 @@ export function resolveTheme(mode: ThemeMode, systemPrefersDark = prefersDarkCol
 }
 
 /** Reflect the resolved theme on `<html>` so CSS, meta and the SW all agree. */
-export function applyTheme(theme: ResolvedTheme) {
+function applyTheme(theme: ResolvedTheme) {
   if (typeof document === 'undefined') {
     return
   }

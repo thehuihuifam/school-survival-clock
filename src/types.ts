@@ -261,9 +261,9 @@ export const WEEKDAY_LONG_LABELS = [
   '토요일',
 ] as const
 
-export const DEFAULT_SCHOOL_DAYS = [1, 2, 3, 4, 5]
+const DEFAULT_SCHOOL_DAYS = [1, 2, 3, 4, 5]
 
-export const ELEMENTARY_PERIODS: TimetablePeriod[] = [
+const ELEMENTARY_PERIODS: TimetablePeriod[] = [
   { id: 'p1', label: '1교시', kind: 'class', start: '09:00', end: '09:40' },
   { id: 'p2', label: '2교시', kind: 'class', start: '09:50', end: '10:30' },
   { id: 'p3', label: '3교시', kind: 'class', start: '10:50', end: '11:30' },
@@ -273,7 +273,7 @@ export const ELEMENTARY_PERIODS: TimetablePeriod[] = [
   { id: 'p6', label: '6교시', kind: 'class', start: '14:10', end: '14:50' },
 ]
 
-export const MIDDLE_PERIODS: TimetablePeriod[] = [
+const MIDDLE_PERIODS: TimetablePeriod[] = [
   { id: 'p1', label: '1교시', kind: 'class', start: '09:00', end: '09:45' },
   { id: 'p2', label: '2교시', kind: 'class', start: '09:55', end: '10:40' },
   { id: 'p3', label: '3교시', kind: 'class', start: '10:50', end: '11:35' },
@@ -284,7 +284,7 @@ export const MIDDLE_PERIODS: TimetablePeriod[] = [
   { id: 'p7', label: '7교시', kind: 'class', start: '15:10', end: '15:55' },
 ]
 
-export const HIGH_PERIODS: TimetablePeriod[] = [
+const HIGH_PERIODS: TimetablePeriod[] = [
   { id: 'p1', label: '1교시', kind: 'class', start: '08:40', end: '09:30' },
   { id: 'p2', label: '2교시', kind: 'class', start: '09:40', end: '10:30' },
   { id: 'p3', label: '3교시', kind: 'class', start: '10:40', end: '11:30' },
@@ -296,7 +296,7 @@ export const HIGH_PERIODS: TimetablePeriod[] = [
   { id: 'self-study', label: '야간 자율학습', kind: 'club', start: '16:30', end: '17:20' },
 ]
 
-export const SHORT_FRIDAY_PERIODS: TimetablePeriod[] = [
+const SHORT_FRIDAY_PERIODS: TimetablePeriod[] = [
   { id: 'p1', label: '1교시', kind: 'class', start: '09:00', end: '09:40' },
   { id: 'p2', label: '2교시', kind: 'class', start: '09:50', end: '10:30' },
   { id: 'p3', label: '3교시', kind: 'class', start: '10:40', end: '11:20' },
@@ -304,9 +304,9 @@ export const SHORT_FRIDAY_PERIODS: TimetablePeriod[] = [
   { id: 'p4', label: '4교시', kind: 'class', start: '12:20', end: '13:00' },
 ]
 
-export const MINIMAL_PERIODS: TimetablePeriod[] = []
+const MINIMAL_PERIODS: TimetablePeriod[] = []
 
-export interface TimetablePreset {
+interface TimetablePreset {
   id: string
   label: string
   description: string
@@ -349,7 +349,7 @@ export const TIMETABLE_PRESETS: TimetablePreset[] = [
 export const SETTINGS_VERSION = 3
 
 /** 예비종 fires this many minutes before a class by default. */
-export const DEFAULT_PRE_ALERT_MINUTES = 3
+const DEFAULT_PRE_ALERT_MINUTES = 3
 /** Choices offered by the settings UI (minutes before the bell). */
 export const PRE_ALERT_MINUTE_OPTIONS = [1, 3, 5, 10]
 export const MIN_PRE_ALERT_MINUTES = 1
@@ -368,15 +368,16 @@ function timetable(periods: TimetablePeriod[], enabled = true): DayTimetable {
 }
 
 export function createDefaultTimetables(): Record<string, DayTimetable> {
-  const weekdays = timetable(ELEMENTARY_PERIODS)
-  const friday = timetable(SHORT_FRIDAY_PERIODS)
+  // `timetable()` already returns a fresh object holding deep-copied periods, so
+  // calling it per weekday gives every day an independently editable timetable
+  // without a second cloning pass.
   return {
     0: timetable(MINIMAL_PERIODS, false),
-    1: { ...weekdays, periods: weekdays.periods.map((period) => ({ ...period })) },
-    2: { ...weekdays, periods: weekdays.periods.map((period) => ({ ...period })) },
-    3: { ...weekdays, periods: weekdays.periods.map((period) => ({ ...period })) },
-    4: { ...weekdays, periods: weekdays.periods.map((period) => ({ ...period })) },
-    5: { ...friday, periods: friday.periods.map((period) => ({ ...period })) },
+    1: timetable(ELEMENTARY_PERIODS),
+    2: timetable(ELEMENTARY_PERIODS),
+    3: timetable(ELEMENTARY_PERIODS),
+    4: timetable(ELEMENTARY_PERIODS),
+    5: timetable(SHORT_FRIDAY_PERIODS),
     6: timetable(MINIMAL_PERIODS, false),
   }
 }
@@ -389,7 +390,7 @@ export function createDefaultTimetables(): Record<string, DayTimetable> {
  * fresh install usable in any year instead of freezing on one hard-coded
  * semester.
  */
-export type StaticSettings = Omit<UserSettings, 'semesterStart' | 'vacationDate' | 'semesterAuto'>
+type StaticSettings = Omit<UserSettings, 'semesterStart' | 'vacationDate' | 'semesterAuto'>
 
 export const BASE_SETTINGS: StaticSettings = {
   version: SETTINGS_VERSION,

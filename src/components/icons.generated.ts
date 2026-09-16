@@ -75,6 +75,3 @@ export const SOLAR_ICON_GLYPHS = {
 } as const satisfies Record<string, SolarIconGlyph>
 
 export type SolarIconName = keyof typeof SOLAR_ICON_GLYPHS
-
-/** Distinct viewBoxes present in the map (1). */
-export const SOLAR_ICON_COUNT = 64

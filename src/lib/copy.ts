@@ -12,12 +12,14 @@ import type {
   ScheduleStatus,
   TimelineSlot,
 } from '../types'
-import { formatDuration, formatHumanDuration, formatMinutes, formatPercent } from './time'
-
-/** `2026-09-17` → `09.17` */
-export function formatShortDate(dateKey: string) {
-  return dateKey.slice(5).replace('-', '.')
-}
+import {
+  formatDateKeyShort,
+  formatDuration,
+  formatHmFromSeconds,
+  formatHumanDuration,
+  formatMinutes,
+  formatPercent,
+} from './time'
 
 export type HeroTone = 'focus' | 'break' | 'rest' | 'done' | 'waiting' | 'pre'
 
@@ -59,7 +61,7 @@ export const PHASE_LABELS: Record<DayPhase, string> = {
  * Is the next class inside the pre-bell window? (`preAlertSeconds` is 0 when the
  * teacher turned 예비종 off, which disables the state entirely.)
  */
-export function isPreAlertWindow(status: ScheduleStatus, preAlertSeconds: number) {
+function isPreAlertWindow(status: ScheduleStatus, preAlertSeconds: number) {
   return preAlertSeconds > 0
     && status.secondsRemaining > 0
     && status.secondsRemaining <= preAlertSeconds
@@ -101,7 +103,7 @@ export function heroHeadline(
       helper: day.description,
       value: nextSchoolDay ? formatHumanDuration(nextSchoolDay.secondsUntilFirstPeriod, 2) : '미정',
       valueNote: nextSchoolDay
-        ? `다음 등교 ${nextSchoolDay.label}${nextSchoolDay.daysUntil > 0 ? ` ${formatShortDate(nextSchoolDay.dateKey)}` : ''} · 첫 일정 ${nextSchoolDay.firstPeriodSeconds === null ? '시간표 없음' : clockFromSeconds(nextSchoolDay.firstPeriodSeconds)}`
+        ? `다음 등교 ${nextSchoolDay.label}${nextSchoolDay.daysUntil > 0 ? ` ${formatDateKeyShort(nextSchoolDay.dateKey)}` : ''} · 첫 일정 ${nextSchoolDay.firstPeriodSeconds === null ? '시간표 없음' : formatHmFromSeconds(nextSchoolDay.firstPeriodSeconds)}`
         : '설정에서 학기 일정과 시간표를 확인해 주세요',
       tone: 'rest',
       icon: day.dayType === 'vacation' ? 'moon-stars-bold' : 'sunrise-bold',
@@ -114,7 +116,7 @@ export function heroHeadline(
     return {
       kicker: 'MISSION COMPLETE',
       title: '오늘 일정 완료',
-      helper: `${clockFromSeconds(outline.dismissalSeconds)} 하교 · 수고하셨습니다`,
+      helper: `${formatHmFromSeconds(outline.dismissalSeconds)} 하교 · 수고하셨습니다`,
       value: `+${formatHumanDuration(status.secondsSinceDismissal, 2)}`,
       valueNote: status.totalClassCount > 0
         ? `${status.totalClassCount}교시 · ${formatMinutes(status.totalClassSeconds)} 수업 모두 완료`
@@ -134,7 +136,7 @@ export function heroHeadline(
         first,
         `오늘 ${status.totalClassCount}교시 · 수업 ${formatMinutes(status.totalClassSeconds)}`,
         0,
-        `등교 ${clockFromSeconds(first.startSeconds)}`,
+        `등교 ${formatHmFromSeconds(first.startSeconds)}`,
       )
     }
     return {
@@ -148,7 +150,7 @@ export function heroHeadline(
       tone: 'waiting',
       icon: 'sunrise-bold',
       barProgress: 0,
-      barLabel: `등교 ${first ? clockFromSeconds(first.startSeconds) : '--:--'}`,
+      barLabel: `등교 ${first ? formatHmFromSeconds(first.startSeconds) : '--:--'}`,
     }
   }
 
@@ -180,12 +182,12 @@ export function heroHeadline(
       helper: `${activeSlot.timeLabel} · ${formatPercent(status.slotProgress, 0)}% 지남`,
       value: formatDuration(status.secondsRemaining),
       valueNote: isBreak || isLunch
-        ? nextSlot ? `다음: ${nextSlot.label} ${clockFromSeconds(nextSlot.startSeconds)}` : '이어서 하교'
+        ? nextSlot ? `다음: ${nextSlot.label} ${formatHmFromSeconds(nextSlot.startSeconds)}` : '이어서 하교'
         : `오늘 남은 수업 ${formatMinutes(status.remainingClassSeconds)} · ${status.remainingClassCount}교시`,
       tone: isBreak ? 'break' : isLunch ? 'break' : 'focus',
       icon: isBreak ? 'cup-hot-bold' : isLunch ? 'plate-bold' : activeSlot.kind === 'duty' ? 'stopwatch-bold' : 'notebook-bold',
       barProgress: dayProgress,
-      barLabel: `하루 ${formatPercent(dayProgress, 0)}% · 하교 ${clockFromSeconds(outline.dismissalSeconds)}`,
+      barLabel: `하루 ${formatPercent(dayProgress, 0)}% · 하교 ${formatHmFromSeconds(outline.dismissalSeconds)}`,
     }
   }
 
@@ -205,7 +207,7 @@ export function heroHeadline(
     title: nextSlot ? `${nextSlot.label} 준비` : '하루 마무리',
     helper: nextSlot
       ? `${nextSlot.timeLabel}까지 ${formatHumanDuration(status.secondsRemaining, 2)}`
-      : `${clockFromSeconds(outline.dismissalSeconds)} 하교까지 ${formatHumanDuration(status.secondsRemaining, 2)}`,
+      : `${formatHmFromSeconds(outline.dismissalSeconds)} 하교까지 ${formatHumanDuration(status.secondsRemaining, 2)}`,
     value: formatDuration(status.secondsRemaining),
     valueNote: `오늘 남은 수업 ${formatMinutes(status.remainingClassSeconds)}`,
     tone: 'break',
@@ -213,13 +215,6 @@ export function heroHeadline(
     barProgress: dayProgress,
     barLabel: `하루 ${formatPercent(dayProgress, 0)}% 진행`,
   }
-}
-
-export function clockFromSeconds(totalSeconds: number) {
-  const safe = Math.max(0, Math.floor(totalSeconds))
-  const hours = Math.floor(safe / 3600)
-  const minutes = Math.floor((safe % 3600) / 60)
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
 }
 
 /**
@@ -268,5 +263,5 @@ export function documentTitleFor(status: ScheduleStatus, now: KstTimeParts) {
     return `${status.nextSlot.label}까지 ${formatDuration(status.secondsRemaining)} · ${base}`
   }
 
-  return `${formatHumanDuration(status.secondsRemaining, 2)} 남음 · ${base} · ${formatShortDate(now.dateKey)}`
+  return `${formatHumanDuration(status.secondsRemaining, 2)} 남음 · ${base} · ${formatDateKeyShort(now.dateKey)}`
 }

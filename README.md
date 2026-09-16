@@ -54,13 +54,14 @@ npm run dev        # http://localhost:5173
 
 ```bash
 npm run icons      # src에서 참조된 Solar 아이콘을 인라인 SVG 맵으로 생성
+npm run icons:app  # public/icon-*.png, apple-touch-icon.png 래스터라이즈 (의존성 없음)
 npm run typecheck  # tsc -b (strict)
 npm test           # vitest 단위 테스트 (스케줄 엔진·학기 수학·설정 정규화 등)
 npm run build      # icons → typecheck → vite build
 npm run preview    # 프로덕션 빌드 미리보기
 ```
 
-앱 아이콘(`public/icon-*.png`)은 `scripts/generate-app-icons.mjs`가 의존성 없이 래스터라이즈합니다. 수정이 필요하면 `node scripts/generate-app-icons.mjs`를 실행하세요.
+앱 아이콘(`public/icon-*.png`)은 `scripts/generate-app-icons.mjs`가 의존성 없이 래스터라이즈합니다. 수정이 필요하면 `npm run icons:app`을 실행하세요.
 
 ## 배포 (GitHub Pages)
 

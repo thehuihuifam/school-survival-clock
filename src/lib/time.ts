@@ -7,10 +7,10 @@
  */
 import { WEEKDAY_LABELS, WEEKDAY_LONG_LABELS, type KstTimeParts } from '../types'
 
-export const SEOUL_TIME_ZONE = 'Asia/Seoul'
+const SEOUL_TIME_ZONE = 'Asia/Seoul'
 export const DAY_IN_MS = 24 * 60 * 60 * 1000
-export const MINUTE_IN_SECONDS = 60
-export const HOUR_IN_SECONDS = 3600
+const MINUTE_IN_SECONDS = 60
+const HOUR_IN_SECONDS = 3600
 export const DAY_IN_SECONDS = 24 * HOUR_IN_SECONDS
 
 const kstFormatter = new Intl.DateTimeFormat('ko-KR', {
@@ -87,20 +87,8 @@ export function formatFullKstDate(parts: KstTimeParts) {
   return `${parts.year}년 ${parts.month}월 ${parts.day}일`
 }
 
-export function formatKstTime(parts: KstTimeParts) {
-  return `${pad(parts.hour)}:${pad(parts.minute)}:${pad(parts.second)}`
-}
-
-export function formatKstHourMinute(parts: KstTimeParts) {
-  return `${pad(parts.hour)}:${pad(parts.minute)}`
-}
-
 export function weekdayLabel(weekdayIndex: number) {
   return WEEKDAY_LABELS[((weekdayIndex % 7) + 7) % 7] ?? ''
-}
-
-export function weekdayLongLabel(weekdayIndex: number) {
-  return WEEKDAY_LONG_LABELS[((weekdayIndex % 7) + 7) % 7] ?? ''
 }
 
 /** `HH:MM:SS`, clamped to non-negative whole seconds. */
@@ -213,10 +201,6 @@ export function parseDateInput(value: string) {
   return Date.UTC(year, month - 1, day)
 }
 
-export function dateInputFromKst(parts: KstTimeParts) {
-  return parts.dateKey
-}
-
 /** Turn an epoch value back into a `YYYY-MM-DD` key (UTC calendar). */
 export function dateKeyFromUtcMs(value: number) {
   const date = new Date(value)
@@ -253,7 +237,7 @@ export function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max)
 }
 
-/** `09.17 (목)` style label used across the cards. */
+/** `2026-09-17` → `09.17`; anything unparseable is echoed back untouched. */
 export function formatDateKeyShort(dateKey: string) {
   if (!isValidDateInput(dateKey)) {
     return dateKey
@@ -290,9 +274,4 @@ export function secondsUntilDateKey(reference: KstTimeParts, dateKey: string) {
     return 0
   }
   return Math.round((target - reference.epochMs) / 1000)
-}
-
-/** Seconds from midnight to the next midnight, respecting the real offset. */
-export function secondsUntilNextMidnight(reference: KstTimeParts) {
-  return secondsUntilDateKey(reference, shiftDateKey(reference.dateKey, 1))
 }

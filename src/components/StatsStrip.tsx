@@ -1,7 +1,6 @@
 import type { CSSProperties } from 'react'
 import { SolarIcon, type SolarIconName } from './Icon'
-import { formatHumanDuration, formatMinutes, formatPercent } from '../lib/time'
-import { clockFromSeconds } from '../lib/copy'
+import { formatHmFromSeconds, formatHumanDuration, formatMinutes, formatPercent } from '../lib/time'
 import type { ScheduleStatus, SemesterMetrics } from '../types'
 import type { WeekContext } from '../lib/schedule'
 
@@ -27,7 +26,7 @@ const revealStyle = { '--index': 0 } as CSSProperties
 export function StatsStrip({ status, metrics, week }: StatsStripProps) {
   const isOffDay = status.phase === 'off-day'
   const dismissalLabel = status.outline.dismissalSeconds > 0
-    ? clockFromSeconds(status.outline.dismissalSeconds)
+    ? formatHmFromSeconds(status.outline.dismissalSeconds)
     : '--:--'
 
   const tiles: StatTile[] = [

@@ -38,14 +38,14 @@ import {
 
 export const STORAGE_KEY = 'school-survival-clock.settings.v3'
 /** Keys used by earlier builds; read once so returning users keep their data. */
-export const LEGACY_STORAGE_KEYS = [
+const LEGACY_STORAGE_KEYS = [
   'school-survival-clock.settings.v2',
   'teacher-survival-dashboard-settings',
   'school-survival-clock.settings.v1',
 ]
 
 /** One-day exceptions further than this from today are pruned on load. */
-export const OVERRIDE_WINDOW_DAYS = 6
+const OVERRIDE_WINDOW_DAYS = 6
 const MAX_DAY_OVERRIDES = 14
 
 const PERIOD_KINDS: PeriodKind[] = ['class', 'lunch', 'club', 'duty']
@@ -370,18 +370,6 @@ export function saveSettings(settings: UserSettings) {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))
   } catch {
     // Private mode / quota: the app keeps working from memory.
-  }
-}
-
-export function clearStoredSettings() {
-  if (typeof window === 'undefined' || !window.localStorage) {
-    return
-  }
-  try {
-    window.localStorage.removeItem(STORAGE_KEY)
-    LEGACY_STORAGE_KEYS.forEach((key) => window.localStorage.removeItem(key))
-  } catch {
-    // Nothing else to do — resetting is a convenience, not a contract.
   }
 }
 

@@ -142,4 +142,52 @@ describe('App render', () => {
     expect(html).toContain('오늘 하루 예외')
     expect(html).not.toContain('6교시')
   })
+
+  /* -------------------------------------------------------------- *
+   * Boundary states the dashboard must never fall out of.
+   * -------------------------------------------------------------- */
+
+  it('stays in the dismissed state at 23:59 KST', () => {
+    const html = renderAt('2026-09-17T14:59:00Z') // 목요일 23:59 KST
+
+    expect(html).toContain('MISSION COMPLETE')
+    expect(html).toContain('23:59')
+    expect(html).toContain('26.09.17 목요일')
+    // The shared HH:MM formatter renders the dismissal label here.
+    expect(html).toContain('16:30 하교 · 수고하셨습니다')
+  })
+
+  it('rolls over to the next school day exactly at KST midnight', () => {
+    const html = renderAt('2026-09-17T15:00:00Z') // 금요일 00:00 KST
+
+    // Date, weekday, D-Day counter and battery position all advance together.
+    expect(html).toContain('26.09.18 금요일')
+    expect(html).toContain('2026년 9월 18일')
+    expect(html).toContain('D-110')
+    expect(html).not.toContain('26.09.17')
+    // The new day starts in the pre-bell state, not still dismissed.
+    expect(html).toContain('BEFORE THE BELL')
+    expect(html).toContain('1교시까지')
+    expect(html).not.toContain('MISSION COMPLETE')
+  })
+
+  it('counts down correctly in the pre-dawn hours of a school day', () => {
+    const html = renderAt('2026-09-17T17:30:00Z') // 금요일 02:30 KST
+
+    expect(html).toContain('BEFORE THE BELL')
+    expect(html).toContain('6시간 30분 남음')
+    expect(html).toContain('06:30:00')
+    expect(html).toContain('새벽까지 고생 많으셨어요')
+  })
+
+  it('shows recovery mode when opened in the pre-dawn hours of a weekend', () => {
+    const html = renderAt('2026-09-18T17:30:00Z') // 토요일 02:30 KST
+
+    expect(html).toContain('RECOVERY MODE')
+    expect(html).toContain('주말')
+    expect(html).not.toContain('MISSION COMPLETE')
+    // The next-school-day date comes from the shared short-date formatter.
+    expect(html).toContain('다음 등교 월요일 09.21')
+    expect(html).toContain('첫 일정 09:00')
+  })
 })
