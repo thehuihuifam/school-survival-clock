@@ -3,8 +3,7 @@ import { SolarIcon } from '../Icon'
 import { Field, ToggleRow } from './Field'
 import { TIMETABLE_PRESETS, WEEKDAY_LABELS, type DayTimetable, type PeriodKind, type TimetablePeriod } from '../../types'
 import { PERIOD_KIND_LABELS } from '../../types'
-import { isValidTimeInput, parseTimeToSeconds } from '../../lib/time'
-import { clockFromSeconds } from '../../lib/copy'
+import { formatHmFromSeconds, isValidTimeInput, parseTimeToSeconds } from '../../lib/time'
 
 interface TimetableEditorProps {
   timetables: Record<string, DayTimetable>
@@ -45,8 +44,8 @@ function defaultNewPeriod(periods: TimetablePeriod[]): TimetablePeriod {
     id: newPeriodId(),
     label: `${ordinal}교시`,
     kind: 'class',
-    start: clockFromSeconds(Math.min(start, 23 * 3600 + 20 * 60)),
-    end: clockFromSeconds(Math.min(end, 23 * 3600 + 59 * 60)),
+    start: formatHmFromSeconds(Math.min(start, 23 * 3600 + 20 * 60)),
+    end: formatHmFromSeconds(Math.min(end, 23 * 3600 + 59 * 60)),
   }
 }
 
@@ -344,7 +343,7 @@ export function TimetableEditor({
       {dismissalTooEarly && (
         <p className="inline-warning">
           <SolarIcon name="info-circle-linear" size={14} />
-          마지막 블록이 {clockFromSeconds(lastPeriodEnd)}에 끝나 퇴근 시각({dismissalTime})보다 늦습니다. 타임라인은 마지막 블록 기준으로 표시됩니다.
+          마지막 블록이 {formatHmFromSeconds(lastPeriodEnd)}에 끝나 퇴근 시각({dismissalTime})보다 늦습니다. 타임라인은 마지막 블록 기준으로 표시됩니다.
         </p>
       )}
 

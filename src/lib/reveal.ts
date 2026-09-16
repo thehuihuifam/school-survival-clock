@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 
-export const REVEAL_SELECTOR = '.reveal-on-scroll'
-export const REVEAL_VISIBLE_CLASS = 'is-visible'
+const REVEAL_SELECTOR = '.reveal-on-scroll'
+const REVEAL_VISIBLE_CLASS = 'is-visible'
 
 /**
  * `.reveal-on-scroll` 요소를 IntersectionObserver로 관찰해

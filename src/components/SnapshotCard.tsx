@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react'
 import { SolarIcon, type SolarIconName } from './Icon'
-import { formatDuration, formatHumanDuration } from '../lib/time'
-import { PHASE_LABELS, clockFromSeconds } from '../lib/copy'
+import { formatDuration, formatHmFromSeconds, formatHumanDuration } from '../lib/time'
+import { PHASE_LABELS } from '../lib/copy'
 import type { UpcomingEvent } from '../lib/timeline'
 import type { DayOverride, NextDayOff, ScheduleStatus, SemesterMetrics } from '../types'
 
@@ -40,7 +40,7 @@ export function SnapshotCard({
   const isDismissed = status.phase === 'dismissed'
   const isOffDay = status.phase === 'off-day'
   const dismissalLabel = status.outline.dismissalSeconds > 0
-    ? clockFromSeconds(status.outline.dismissalSeconds)
+    ? formatHmFromSeconds(status.outline.dismissalSeconds)
     : dismissalTime
 
   const rows: SnapshotRow[] = [

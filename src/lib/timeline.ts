@@ -44,7 +44,7 @@ export interface TimelineLayout {
 }
 
 /** Blocks narrower than this (in % of the track) render icon-only. */
-export const COMPACT_WIDTH_PERCENT = 7
+const COMPACT_WIDTH_PERCENT = 7
 
 export function layoutTimeline(outline: DayOutline, currentSeconds: number): TimelineLayout {
   const slots = outline.slots

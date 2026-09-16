@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   DAY_IN_SECONDS,
+  formatDateKeyShort,
   formatDuration,
   formatHmFromSeconds,
   formatHumanDuration,
@@ -78,6 +79,21 @@ describe('formatting', () => {
     expect(formatHmFromSeconds(16 * 3600 + 30 * 60)).toBe('16:30')
   })
 
+  it('is the single HH:MM clock formatter for the whole app', () => {
+    // `schedule.ts` (slot time labels, dismissal label) and `copy.ts` (hero
+    // helper, bar labels) used to carry private copies of this. They now share
+    // this one, so its edge behaviour is the whole app's contract.
+    expect(formatHmFromSeconds(0)).toBe('00:00')
+    expect(formatHmFromSeconds(59)).toBe('00:00')
+    expect(formatHmFromSeconds(8 * 3600 + 40 * 60)).toBe('08:40')
+    expect(formatHmFromSeconds(23 * 3600 + 59 * 60)).toBe('23:59')
+    // Spans past midnight are printed as-is rather than wrapped, which is what
+    // the duty-tail label relies on.
+    expect(formatHmFromSeconds(25 * 3600)).toBe('25:00')
+    expect(formatHmFromSeconds(-1)).toBe('00:00')
+    expect(formatHmFromSeconds(900.9)).toBe('00:15')
+  })
+
   it('produces conversational durations', () => {
     expect(formatHumanDuration(45)).toBe('45초')
     expect(formatHumanDuration(12 * 60)).toBe('12분')
@@ -92,6 +108,15 @@ describe('date key helpers', () => {
     expect(shiftDateKey('2026-09-30', 1)).toBe('2026-10-01')
     expect(shiftDateKey('2026-01-01', -1)).toBe('2025-12-31')
     expect(shiftDateKey('2026-02-28', 1)).toBe('2026-03-01')
+  })
+
+  it('shortens a date key and echoes malformed input untouched', () => {
+    expect(formatDateKeyShort('2026-09-17')).toBe('09.17')
+    expect(formatDateKeyShort('2026-01-06')).toBe('01.06')
+    // The removed `copy.ts` copy mangled anything it was handed; the shared
+    // helper validates first, so a bad date never reaches the UI as `.date`.
+    expect(formatDateKeyShort('not-a-date')).toBe('not-a-date')
+    expect(formatDateKeyShort('2026-02-30')).toBe('2026-02-30')
   })
 
   it('knows the weekday of a date key', () => {

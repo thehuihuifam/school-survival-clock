@@ -21,7 +21,7 @@
  * until 8월 17일) while `getAutoSemesterWindow('2026-08-18')` is already the fall
  * window — so the dashboard can promise the 8월 18일 개학일 during 여름방학.
  */
-import { parseDateInput } from './time'
+import { pad, parseDateInput } from './time'
 
 export interface SemesterWindow {
   /** `spring` = 1학기, `fall` = 2학기, `manual` = the teacher's own dates. */
@@ -43,10 +43,6 @@ const FALL_START_DAY = 818 // 8월 18일
 const WINTER_VACATION_DAY = 106 // 다음 해 1월 6일
 /** `MMDD` of March 1st — everything below it belongs to the previous school year. */
 const SCHOOL_YEAR_START_DAY = 300
-
-function pad(value: number) {
-  return String(value).padStart(2, '0')
-}
 
 function dateKey(year: number, month: number, day: number) {
   return `${year}-${pad(month)}-${pad(day)}`
