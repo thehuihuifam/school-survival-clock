@@ -26,6 +26,15 @@ npm run build
 npm run preview
 ```
 
+## 배포 (GitHub Pages)
+
+`main` 브랜치에 push하면 GitHub Actions(`.github/workflows/deploy.yml`)가 빌드 후 GitHub Pages에 자동 배포합니다.
+
+- 배포 주소: `https://<github-사용자명>.github.io/school-survival-clock/`
+- CI 빌드에서는 `vite.config.ts`의 `base`가 `/school-survival-clock/`로 설정되고, 로컬 개발/미리보기는 기존처럼 `/`를 사용합니다.
+- 최초 1회는 저장소 **Settings → Pages → Build and deployment → Source**를 **GitHub Actions**로 지정해야 합니다.
+- 수동 재배포가 필요하면 Actions 탭에서 **Deploy to GitHub Pages** 워크플로를 `workflow_dispatch`로 실행할 수 있습니다.
+
 ## 기술 스택
 
 - Vite + React + TypeScript
