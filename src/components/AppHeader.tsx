@@ -1,11 +1,5 @@
-import {
-  BatteryCharging,
-  Maximize2,
-  Minimize2,
-  Moon,
-  Settings2,
-  Sun,
-} from 'lucide-react'
+import type { CSSProperties } from 'react'
+import { SolarIcon } from './Icon'
 import type { Theme } from '../types'
 
 interface AppHeaderProps {
@@ -16,6 +10,8 @@ interface AppHeaderProps {
   onOpenSettings: () => void
 }
 
+const revealStyle = { '--index': 0 } as CSSProperties
+
 export function AppHeader({
   theme,
   isFullscreen,
@@ -24,10 +20,10 @@ export function AppHeader({
   onOpenSettings,
 }: AppHeaderProps) {
   return (
-    <header className="topbar">
+    <header className="topbar reveal" style={revealStyle}>
       <div className="brand-lockup">
         <div className="brand-mark" aria-hidden="true">
-          <BatteryCharging size={25} strokeWidth={2.2} />
+          <SolarIcon name="battery-charge-bold" size={25} />
           <span className="brand-mark-spark" />
         </div>
         <div>
@@ -48,7 +44,7 @@ export function AppHeader({
           aria-label={theme === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환'}
           title={theme === 'dark' ? '라이트 모드' : '다크 모드'}
         >
-          {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          {theme === 'dark' ? <SolarIcon name="sun-2-bold" size={18} /> : <SolarIcon name="moon-bold" size={18} />}
         </button>
         <button
           className="icon-button"
@@ -57,10 +53,12 @@ export function AppHeader({
           aria-label={isFullscreen ? '전체 화면 종료' : '전체 화면으로 보기'}
           title={isFullscreen ? '전체 화면 종료' : '전체 화면으로 보기'}
         >
-          {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+          {isFullscreen
+            ? <SolarIcon name="minimize-square-bold" size={18} />
+            : <SolarIcon name="maximize-square-3-bold" size={18} />}
         </button>
         <button className="settings-button" type="button" onClick={onOpenSettings}>
-          <Settings2 size={17} />
+          <SolarIcon name="settings-bold" size={17} />
           <span>내 설정</span>
         </button>
       </div>

@@ -1,5 +1,5 @@
-import { CalendarClock, Clock3, Save, School, Settings2, X } from 'lucide-react'
 import { useEffect, useState, type FormEvent, type MouseEvent } from 'react'
+import { SolarIcon } from './Icon'
 import type { UserSettings } from '../types'
 
 interface SettingsModalProps {
@@ -58,14 +58,14 @@ export function SettingsModal({ isOpen, settings, onClose, onSave }: SettingsMod
       <section className="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
         <div className="modal-header">
           <div className="modal-title-lockup">
-            <div className="section-icon settings-icon"><Settings2 size={19} /></div>
+            <div className="section-icon settings-icon"><SolarIcon name="settings-bold" size={19} /></div>
             <div>
               <p className="eyebrow">PERSONAL CONTROL ROOM</p>
               <h2 id="settings-title">나의 교실 세팅</h2>
             </div>
           </div>
           <button className="modal-close" type="button" onClick={onClose} aria-label="설정 닫기">
-            <X size={20} />
+            <SolarIcon name="close-circle-bold" size={20} />
           </button>
         </div>
 
@@ -73,7 +73,7 @@ export function SettingsModal({ isOpen, settings, onClose, onSave }: SettingsMod
 
         <form onSubmit={handleSubmit}>
           <div className="settings-field">
-            <label htmlFor="teacher-name"><School size={16} /> 선생님 / 학교 이름</label>
+            <label htmlFor="teacher-name"><SolarIcon name="user-rounded-bold" size={16} /> 선생님 / 학교 이름</label>
             <input
               id="teacher-name"
               type="text"
@@ -87,7 +87,7 @@ export function SettingsModal({ isOpen, settings, onClose, onSave }: SettingsMod
 
           <div className="settings-form-grid">
             <div className="settings-field">
-              <label htmlFor="dismissal-time"><Clock3 size={16} /> 오늘 퇴근 시각</label>
+              <label htmlFor="dismissal-time"><SolarIcon name="clock-circle-bold" size={16} /> 오늘 퇴근 시각</label>
               <input
                 id="dismissal-time"
                 type="time"
@@ -98,7 +98,7 @@ export function SettingsModal({ isOpen, settings, onClose, onSave }: SettingsMod
               <span className="field-hint">퇴근 카운트다운과 방과후 시간에 반영됩니다.</span>
             </div>
             <div className="settings-field">
-              <label htmlFor="semester-start"><CalendarClock size={16} /> 학기 시작일</label>
+              <label htmlFor="semester-start"><SolarIcon name="calendar-date-bold" size={16} /> 학기 시작일</label>
               <input
                 id="semester-start"
                 type="date"
@@ -111,7 +111,7 @@ export function SettingsModal({ isOpen, settings, onClose, onSave }: SettingsMod
           </div>
 
           <div className="settings-field">
-            <label htmlFor="vacation-date"><CalendarClock size={16} /> 방학 시작일</label>
+            <label htmlFor="vacation-date"><SolarIcon name="calendar-date-bold" size={16} /> 방학 시작일</label>
             <input
               id="vacation-date"
               type="date"
@@ -124,7 +124,9 @@ export function SettingsModal({ isOpen, settings, onClose, onSave }: SettingsMod
 
           <div className="modal-actions">
             <button className="modal-secondary-button" type="button" onClick={onClose}>취소</button>
-            <button className="modal-primary-button" type="submit"><Save size={16} /> 변경사항 저장</button>
+            <button className="modal-primary-button" type="submit">
+              <SolarIcon name="diskette-bold" size={16} /> 변경사항 저장
+            </button>
           </div>
         </form>
       </section>
