@@ -123,9 +123,83 @@ export function alertCopy(event: ScheduleEvent, status: ScheduleStatus): { title
   }
 }
 
+/* ------------------------------------------------------------------ *
+ * 예비종 (pre-bell)
+ * ------------------------------------------------------------------ */
+
+/**
+ * The "get ready" cue: fired once, a few minutes before a class starts, so a
+ * teacher can wrap up whatever they are doing instead of only learning about
+ * the bell when it rings.
+ */
+export interface PreAlertEvent {
+  kind: 'pre-bell'
+  slot: TimelineSlot
+  secondsRemaining: number
+  /** One cue per phase — used by the caller to dedupe. */
+  key: string
+}
+
+/**
+ * Detect an upcoming class that has entered the pre-bell window.
+ *
+ * `previousKey` is the key of the last cue already played; `null` means "this is
+ * the first evaluation after a page load", which is deliberately ignored so
+ * opening the dashboard does not fire a chime for a class that is already
+ * imminent. Only real class blocks trigger it — breaks and lunch keep their own
+ * transition bells.
+ */
+export function detectPreAlert(
+  status: ScheduleStatus,
+  preAlertSeconds: number,
+  previousKey: string | null,
+): PreAlertEvent | null {
+  if (preAlertSeconds <= 0 || previousKey === null) {
+    return null
+  }
+
+  // No phase filter on purpose: a 쉬는 시간 is modelled as a running block, so
+  // "the next class is three minutes away" is true *during* the break — which
+  // is exactly when the cue matters. Classes, lunch and the duty tail are
+  // excluded by the kind check below, and `nextSlot` is null on days off.
+  const slot = status.nextSlot
+  if (!slot || slot.kind !== 'class') {
+    return null
+  }
+  if (status.secondsRemaining <= 0 || status.secondsRemaining > preAlertSeconds) {
+    return null
+  }
+
+  const key = `${status.phaseKey}:pre-bell`
+  if (key === previousKey) {
+    return null
+  }
+
+  return { kind: 'pre-bell', slot, secondsRemaining: status.secondsRemaining, key }
+}
+
+/** Copy for the pre-bell notification. */
+export function preAlertCopy(event: PreAlertEvent): { title: string; body: string } {
+  return {
+    title: `곧 ${event.slot.label} 시작`,
+    body: `${event.slot.timeLabel} · ${formatHumanDuration(event.secondsRemaining, 1)} 남았습니다`,
+  }
+}
+
 export interface AlertOptions {
   sound: boolean
   notify: boolean
+}
+
+/** Play the pre-bell chime and/or system notification. */
+export function dispatchPreAlert(event: PreAlertEvent, { sound, notify }: AlertOptions) {
+  if (sound) {
+    chimeEngine.play('pre-bell')
+  }
+  if (notify) {
+    const { title, body } = preAlertCopy(event)
+    showNotification({ title, body, tag: `survival-pre-bell-${event.slot.id}` })
+  }
 }
 
 /** Fire the chime and/or system notification for a fresh transition. */

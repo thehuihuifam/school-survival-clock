@@ -1,14 +1,21 @@
 import { useMemo, type CSSProperties } from 'react'
 import { formatFullKstDate, formatKstDate, pad } from '../lib/time'
 import { DAY_TYPE_TONES, greetingForHour, heroHeadline } from '../lib/copy'
+import { DayOverrideBar } from './DayOverrideBar'
 import { SolarIcon } from './Icon'
-import type { KstTimeParts, NextSchoolDay, ScheduleStatus } from '../types'
+import type { DayOverride, KstTimeParts, NextSchoolDay, ScheduleStatus } from '../types'
 
 interface ClockHeroProps {
   now: KstTimeParts
   displayName: string
   status: ScheduleStatus
   nextSchoolDay: NextSchoolDay | null
+  /** Seconds before a class at which the pre-bell state turns on (0 = off). */
+  preAlertSeconds: number
+  /** Today's one-day exception, if the teacher set one. */
+  override: DayOverride | null
+  dismissalTime: string
+  onOverrideChange: (override: DayOverride | null) => void
 }
 
 const revealStyle = { '--index': 1 } as CSSProperties
@@ -22,8 +29,20 @@ function avatarInitial(displayName: string) {
   return /[가-힣]/.test(firstCharacter) ? firstCharacter : firstCharacter.toUpperCase()
 }
 
-export function ClockHero({ now, displayName, status, nextSchoolDay }: ClockHeroProps) {
-  const headline = useMemo(() => heroHeadline(status, nextSchoolDay), [status, nextSchoolDay])
+export function ClockHero({
+  now,
+  displayName,
+  status,
+  nextSchoolDay,
+  preAlertSeconds,
+  override,
+  dismissalTime,
+  onOverrideChange,
+}: ClockHeroProps) {
+  const headline = useMemo(
+    () => heroHeadline(status, nextSchoolDay, preAlertSeconds),
+    [status, nextSchoolDay, preAlertSeconds],
+  )
 
   // Screen readers get one polite announcement per minute instead of a
   // per-second storm from the visual clock.
@@ -101,6 +120,13 @@ export function ClockHero({ now, displayName, status, nextSchoolDay }: ClockHero
         </div>
         <p className="tiny-status"><SolarIcon name="stars-minimalistic-bold" size={14} /> {greetingForHour(now.hour)}</p>
       </div>
+
+      <DayOverrideBar
+        dateKey={now.dateKey}
+        override={override}
+        dismissalTime={dismissalTime}
+        onChange={onOverrideChange}
+      />
     </section>
   )
 }

@@ -11,6 +11,7 @@ import {
   WEEKDAY_LONG_LABELS,
   type DayContext,
   type DayOutline,
+  type DayOverride,
   type DayTimetable,
   type Holiday,
   type KstTimeParts,
@@ -21,6 +22,7 @@ import {
   type TimetablePeriod,
   type UserSettings,
 } from '../types'
+import { getAutoSemesterWindow, type SemesterWindow } from './semesterWindow'
 import {
   DAY_IN_SECONDS,
   HOUR_IN_SECONDS,
@@ -52,6 +54,11 @@ const EMPTY_OUTLINE: DayOutline = {
   spanSeconds: 0,
 }
 
+/** A fresh, empty outline (never the shared constant: callers may extend it). */
+function emptyOutline(): DayOutline {
+  return { ...EMPTY_OUTLINE, slots: [], classSlots: [] }
+}
+
 const EMPTY_TIMETABLE: DayTimetable = { enabled: false, periods: [] }
 
 /* ------------------------------------------------------------------ *
@@ -61,6 +68,53 @@ const EMPTY_TIMETABLE: DayTimetable = { enabled: false, periods: [] }
 export function getDayTimetable(settings: UserSettings, weekdayIndex: number): DayTimetable {
   const key = String(((weekdayIndex % 7) + 7) % 7)
   return settings.timetables[key] ?? EMPTY_TIMETABLE
+}
+
+/** The one-day exception registered for `dateKey`, when there is one. */
+export function getDayOverride(settings: UserSettings, dateKey: string): DayOverride | null {
+  return settings.dayOverrides?.[dateKey] ?? null
+}
+
+/** `true` when the teacher marked the whole day as "no classes". */
+export function isDayOffOverride(settings: UserSettings, dateKey: string) {
+  return getDayOverride(settings, dateKey)?.kind === 'off'
+}
+
+/**
+ * Dismissal time that applies to a specific date.
+ *
+ * A `short` override (단축 수업, 시험 기간) replaces the configured dismissal for
+ * that date only, so the timeline, the hero countdown and the celebration all
+ * agree without touching the weekly timetable.
+ */
+export function dismissalTimeFor(settings: UserSettings, dateKey: string): string {
+  const override = getDayOverride(settings, dateKey)
+  if (override?.kind === 'short' && isValidTimeInput(override.dismissalTime)) {
+    return override.dismissalTime
+  }
+  return settings.dismissalTime
+}
+
+/**
+ * A short-day override is a hard stop, not just an earlier countdown: blocks
+ * that start after it are dropped and a block straddling it is cut short, which
+ * is what 단축 수업 actually does to the timetable.
+ */
+function hardStopFor(settings: UserSettings, dateKey: string): number | undefined {
+  const override = getDayOverride(settings, dateKey)
+  if (override?.kind !== 'short' || !isValidTimeInput(override.dismissalTime)) {
+    return undefined
+  }
+  return parseTimeToSeconds(override.dismissalTime)
+}
+
+/** Day outline for a date, with every one-day exception already applied. */
+export function buildDayOutline(settings: UserSettings, dateKey: string, weekdayIndex: number): DayOutline {
+  return buildOutline(
+    getDayTimetable(settings, weekdayIndex),
+    dismissalTimeFor(settings, dateKey),
+    hardStopFor(settings, dateKey),
+  )
 }
 
 function isWellFormedPeriod(period: TimetablePeriod): boolean {
@@ -121,14 +175,18 @@ export function slotKindLabel(kind: SlotKind) {
  * Day outline
  * ------------------------------------------------------------------ */
 
-export function buildOutline(timetable: DayTimetable, dismissalTime: string): DayOutline {
+export function buildOutline(
+  timetable: DayTimetable,
+  dismissalTime: string,
+  hardStopSeconds?: number,
+): DayOutline {
   if (!timetable?.enabled) {
-    return { ...EMPTY_OUTLINE, slots: [], classSlots: [] }
+    return emptyOutline()
   }
 
-  const periods = sanitizePeriods(timetable.periods)
+  const periods = truncatePeriods(sanitizePeriods(timetable.periods), hardStopSeconds)
   if (periods.length === 0) {
-    return { ...EMPTY_OUTLINE, slots: [], classSlots: [] }
+    return emptyOutline()
   }
 
   const slots: DayOutline['slots'] = []
@@ -203,6 +261,30 @@ export function buildOutline(timetable: DayTimetable, dismissalTime: string): Da
   }
 }
 
+/**
+ * Apply a hard stop to a day's blocks: anything starting at or after it is
+ * dropped, anything straddling it ends exactly on it.
+ */
+function truncatePeriods(periods: TimetablePeriod[], hardStopSeconds?: number): TimetablePeriod[] {
+  if (hardStopSeconds === undefined) {
+    return periods
+  }
+  const truncated: TimetablePeriod[] = []
+  for (const period of periods) {
+    const startSeconds = parseTimeToSeconds(period.start)
+    if (startSeconds >= hardStopSeconds) {
+      continue
+    }
+    const endSeconds = Math.min(parseTimeToSeconds(period.end), hardStopSeconds)
+    truncated.push(
+      endSeconds === parseTimeToSeconds(period.end)
+        ? period
+        : { ...period, end: formatClockSeconds(endSeconds) },
+    )
+  }
+  return truncated
+}
+
 function formatClockSeconds(totalSeconds: number) {
   const safe = Math.max(0, Math.floor(totalSeconds))
   return `${String(Math.floor(safe / HOUR_IN_SECONDS)).padStart(2, '0')}:${String(Math.floor((safe % HOUR_IN_SECONDS) / 60)).padStart(2, '0')}`
@@ -220,22 +302,43 @@ export function isSchoolWeekday(settings: UserSettings, weekdayIndex: number) {
   return settings.schoolDays.includes(((weekdayIndex % 7) + 7) % 7)
 }
 
+/**
+ * The semester window that governs a date.
+ *
+ * With `semesterAuto` on, the window is looked up *for that date* on the Korean
+ * school calendar, so a date after the current vacation (개학일, next semester)
+ * is classified correctly instead of inheriting a stale vacation state. With it
+ * off, the teacher's own pair of dates defines a single window for everything.
+ */
+export function semesterWindowFor(settings: UserSettings, dateKey: string): SemesterWindow {
+  if (settings.semesterAuto) {
+    return getAutoSemesterWindow(dateKey)
+  }
+  return {
+    id: 'manual',
+    label: '학기',
+    startDate: settings.semesterStart,
+    vacationDate: settings.vacationDate,
+    vacationLabel: '방학',
+  }
+}
+
 export function isInVacation(settings: UserSettings, dateKey: string) {
-  const vacationMs = parseDateInput(settings.vacationDate)
-  if (!Number.isFinite(vacationMs)) {
+  if (!isValidDateInput(dateKey)) {
     return false
   }
+  const vacationMs = parseDateInput(semesterWindowFor(settings, dateKey).vacationDate)
   const todayMs = parseDateInput(dateKey)
-  return Number.isFinite(todayMs) && todayMs >= vacationMs
+  return Number.isFinite(vacationMs) && Number.isFinite(todayMs) && todayMs >= vacationMs
 }
 
 export function isBeforeSemester(settings: UserSettings, dateKey: string) {
-  const startMs = parseDateInput(settings.semesterStart)
-  if (!Number.isFinite(startMs)) {
+  if (!isValidDateInput(dateKey)) {
     return false
   }
+  const startMs = parseDateInput(semesterWindowFor(settings, dateKey).startDate)
   const todayMs = parseDateInput(dateKey)
-  return Number.isFinite(todayMs) && todayMs < startMs
+  return Number.isFinite(startMs) && Number.isFinite(todayMs) && todayMs < startMs
 }
 
 /** Does this weekday carry teaching blocks (class / lunch / club)? */
@@ -255,6 +358,9 @@ export function isScheduledSchoolDay(settings: UserSettings, dateKey: string) {
   if (isInVacation(settings, dateKey) || isBeforeSemester(settings, dateKey)) {
     return false
   }
+  if (isDayOffOverride(settings, dateKey)) {
+    return false
+  }
   if (isHolidayDate(settings, dateKey)) {
     return false
   }
@@ -262,8 +368,9 @@ export function isScheduledSchoolDay(settings: UserSettings, dateKey: string) {
 }
 
 export function getDayContext(now: KstTimeParts, settings: UserSettings, outline?: DayOutline): DayContext {
-  const resolvedOutline = outline ?? buildOutline(getDayTimetable(settings, now.weekdayIndex), settings.dismissalTime)
+  const resolvedOutline = outline ?? buildDayOutline(settings, now.dateKey, now.weekdayIndex)
   const holiday = isHolidayDate(settings, now.dateKey)
+  const override = getDayOverride(settings, now.dateKey)
 
   if (isInVacation(settings, now.dateKey)) {
     return {
@@ -280,7 +387,18 @@ export function getDayContext(now: KstTimeParts, settings: UserSettings, outline
     return {
       dayType: 'before-semester',
       label: '개학 전',
-      description: `개학(${formatDateKeyShort(settings.semesterStart)})까지는 여유 모드예요.`,
+      description: `개학(${formatDateKeyShort(semesterWindowFor(settings, now.dateKey).startDate)})까지는 여유 모드예요.`,
+      isSchoolDay: false,
+      hasClasses: false,
+      holidayLabel: null,
+    }
+  }
+
+  if (override?.kind === 'off') {
+    return {
+      dayType: 'override',
+      label: override.label.trim() || '오늘 휴업',
+      description: '오늘 하루는 수업이 없는 날로 표시했어요. 내일은 원래 시간표로 돌아옵니다.',
       isSchoolDay: false,
       hasClasses: false,
       holidayLabel: null,
@@ -325,38 +443,55 @@ export function getDayContext(now: KstTimeParts, settings: UserSettings, outline
     }
   }
 
+  const dismissalLabel = formatClockSeconds(resolvedOutline.dismissalSeconds)
   return {
     dayType: 'school',
     label: '학교 가는 날',
-    description: `${resolvedOutline.classSlots.length}교시 · 하교 ${formatClockSeconds(resolvedOutline.dismissalSeconds)}`,
+    description: override?.kind === 'short'
+      ? `${resolvedOutline.classSlots.length}교시 · 단축 하교 ${dismissalLabel}`
+      : `${resolvedOutline.classSlots.length}교시 · 하교 ${dismissalLabel}`,
     isSchoolDay: true,
     hasClasses: true,
     holidayLabel: null,
   }
 }
 
+
 /* ------------------------------------------------------------------ *
  * Live status
  * ------------------------------------------------------------------ */
 
 export function getScheduleStatus(now: KstTimeParts, settings: UserSettings): ScheduleStatus {
-  const outline = buildOutline(getDayTimetable(settings, now.weekdayIndex), settings.dismissalTime)
+  const outline = buildDayOutline(settings, now.dateKey, now.weekdayIndex)
   const day = getDayContext(now, settings, outline)
   const currentSeconds = now.daySeconds
 
-  const base: Omit<ScheduleStatus, 'phase' | 'activeSlot' | 'nextSlot' | 'secondsRemaining' | 'slotProgress' | 'dayProgress' | 'classLoadProgress' | 'phaseKey'> = {
-    day,
-    outline,
-    completedClassCount: 0,
-    remainingClassCount: 0,
-    totalClassCount: outline.classSlots.length,
-    remainingClassSeconds: 0,
-    completedClassSeconds: 0,
-    totalClassSeconds: outline.totalClassSeconds,
-    secondsSinceDismissal: 0,
-    isBreak: false,
-    phaseStartSeconds: 0,
-    phaseEndSeconds: 0,
+  // A day without school has no teaching load at all: the weekday timetable —
+  // and its class counters — must not leak into a weekend, a holiday or a
+  // one-day "오늘 휴업" exception.
+  if (!day.isSchoolDay || outline.slots.length === 0 || outline.dayStartSeconds === null) {
+    return {
+      day,
+      outline: emptyOutline(),
+      completedClassCount: 0,
+      remainingClassCount: 0,
+      totalClassCount: 0,
+      remainingClassSeconds: 0,
+      completedClassSeconds: 0,
+      totalClassSeconds: 0,
+      classLoadProgress: 0,
+      secondsSinceDismissal: 0,
+      isBreak: false,
+      phase: 'off-day',
+      activeSlot: null,
+      nextSlot: null,
+      secondsRemaining: 0,
+      slotProgress: 0,
+      dayProgress: 0,
+      phaseStartSeconds: 0,
+      phaseEndSeconds: DAY_IN_SECONDS,
+      phaseKey: `${now.dateKey}:off-day:${day.dayType}`,
+    }
   }
 
   const classTotals = outline.classSlots.reduce(
@@ -377,29 +512,21 @@ export function getScheduleStatus(now: KstTimeParts, settings: UserSettings): Sc
   )
 
   const shared = {
-    ...base,
+    day,
+    outline,
     completedClassCount: classTotals.completed,
     remainingClassCount: classTotals.remaining,
+    totalClassCount: outline.classSlots.length,
     remainingClassSeconds: classTotals.remainingSeconds,
     completedClassSeconds: classTotals.completedSeconds,
+    totalClassSeconds: outline.totalClassSeconds,
+    secondsSinceDismissal: 0,
+    isBreak: false,
+    phaseStartSeconds: 0,
+    phaseEndSeconds: 0,
     classLoadProgress: outline.totalClassSeconds > 0
       ? clamp((classTotals.completedSeconds / outline.totalClassSeconds) * 100, 0, 100)
       : 0,
-  }
-
-  if (!day.isSchoolDay || outline.slots.length === 0 || outline.dayStartSeconds === null) {
-    return {
-      ...shared,
-      phase: 'off-day',
-      activeSlot: null,
-      nextSlot: null,
-      secondsRemaining: 0,
-      slotProgress: 0,
-      dayProgress: 0,
-      phaseStartSeconds: 0,
-      phaseEndSeconds: DAY_IN_SECONDS,
-      phaseKey: `${now.dateKey}:off-day:${day.dayType}`,
-    }
   }
 
   const slots = outline.slots
@@ -490,11 +617,13 @@ export function getNextDayOff(now: KstTimeParts, settings: UserSettings): NextDa
   for (let offset = 0; offset <= LOOKAHEAD_DAYS; offset += 1) {
     const dateKey = shiftDateKey(now.dateKey, offset)
     const holiday = isHolidayDate(settings, dateKey)
+    const override = getDayOverride(settings, dateKey)
+    const isOffOverride = override?.kind === 'off'
     const inVacation = isInVacation(settings, dateKey)
     const beforeSemester = isBeforeSemester(settings, dateKey)
     const isOffWeekday = !isSchoolWeekday(settings, weekdayIndexFromDateKey(dateKey))
 
-    if (!inVacation && !beforeSemester && !holiday && !isOffWeekday) {
+    if (!inVacation && !beforeSemester && !holiday && !isOffOverride && !isOffWeekday) {
       continue
     }
 
@@ -503,7 +632,9 @@ export function getNextDayOff(now: KstTimeParts, settings: UserSettings): NextDa
       ? 'vacation'
       : holiday
         ? 'holiday'
-        : 'weekend'
+        : isOffOverride
+          ? 'override'
+          : 'weekend'
 
     return {
       dateKey,
@@ -512,9 +643,11 @@ export function getNextDayOff(now: KstTimeParts, settings: UserSettings): NextDa
         ? '방학'
         : holiday
           ? (holiday.label.trim() || '공휴일')
-          : offset === 0
-            ? `${weekdayLabel(weekdayIndexFromDateKey(dateKey))}요일 휴식`
-            : `${weekdayLabel(weekdayIndexFromDateKey(dateKey))}요일`,
+          : isOffOverride
+            ? (override.label.trim() || (offset === 0 ? '오늘 휴업' : '휴업일'))
+            : offset === 0
+              ? `${weekdayLabel(weekdayIndexFromDateKey(dateKey))}요일 휴식`
+              : `${weekdayLabel(weekdayIndexFromDateKey(dateKey))}요일`,
       daysUntil: offset,
       secondsUntil: Math.max(0, secondsUntil),
     }
@@ -537,7 +670,7 @@ export function getNextSchoolDay(
     }
 
     const weekdayIndex = weekdayIndexFromDateKey(dateKey)
-    const outline = buildOutline(getDayTimetable(settings, weekdayIndex), settings.dismissalTime)
+    const outline = buildDayOutline(settings, dateKey, weekdayIndex)
     const firstPeriodSeconds = outline.classSlots[0]?.startSeconds ?? outline.dayStartSeconds
     const secondsUntilMidnight = Math.max(0, secondsUntilDateKey(now, dateKey))
     const secondsUntilFirstPeriod = firstPeriodSeconds === null
@@ -597,7 +730,7 @@ export function getWeekContext(now: KstTimeParts, settings: UserSettings): WeekC
 /** Outline for an arbitrary date (used to preview tomorrow / the next school day). */
 export function outlineForDate(settings: UserSettings, dateKey: string): DayOutline {
   if (!isValidDateInput(dateKey)) {
-    return { ...EMPTY_OUTLINE, slots: [], classSlots: [] }
+    return emptyOutline()
   }
-  return buildOutline(getDayTimetable(settings, weekdayIndexFromDateKey(dateKey)), settings.dismissalTime)
+  return buildDayOutline(settings, dateKey, weekdayIndexFromDateKey(dateKey))
 }

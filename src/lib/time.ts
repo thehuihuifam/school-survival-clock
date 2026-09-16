@@ -61,6 +61,16 @@ export function getKstTimeParts(date: Date): KstTimeParts {
   }
 }
 
+/**
+ * Today's KST calendar date key (`YYYY-MM-DD`) — the app's definition of
+ * "today". Every automatic decision (semester window, day overrides, default
+ * settings) is anchored to this instead of the device clock, so a teacher
+ * travelling abroad still sees the Korean school day.
+ */
+export function currentKstDateKey(date: Date = new Date()) {
+  return getKstTimeParts(date).dateKey
+}
+
 /* ------------------------------------------------------------------ *
  * Formatting
  * ------------------------------------------------------------------ */
@@ -69,8 +79,12 @@ export function formatKstDate(parts: KstTimeParts) {
   return `${String(parts.year).slice(-2)}.${pad(parts.month)}.${pad(parts.day)} ${parts.weekday}`
 }
 
+/**
+ * Long date without the weekday: `formatKstDate` right next to it already ends
+ * with `목요일`, and printing it twice read as a glitch.
+ */
 export function formatFullKstDate(parts: KstTimeParts) {
-  return `${parts.year}년 ${parts.month}월 ${parts.day}일 ${parts.weekday}`
+  return `${parts.year}년 ${parts.month}월 ${parts.day}일`
 }
 
 export function formatKstTime(parts: KstTimeParts) {

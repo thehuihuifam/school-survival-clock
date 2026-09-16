@@ -7,7 +7,7 @@
     <meta name="color-scheme" content="dark light" />
     <meta
       name="description"
-      content="한국 교사를 위한 실시간 생존 시계. KST 라이브 시계, 요일별 시간표 레이더, 쉬는 시간·하교 알림, 학기 생존 배터리와 방학 D-Day를 한 화면에서."
+      content="한국 교사를 위한 실시간 생존 시계. KST 라이브 시계, 요일별 시간표 레이더, 예비종·쉬는 시간·하교 알림, 학기 생존 배터리와 방학 D-Day를 한 화면에서."
     />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -55,6 +55,7 @@
       ;(function () {
         try {
           var raw =
+            localStorage.getItem('school-survival-clock.settings.v3') ||
             localStorage.getItem('school-survival-clock.settings.v2') ||
             localStorage.getItem('teacher-survival-dashboard-settings')
           var mode = 'dark'

@@ -40,6 +40,25 @@ export interface Holiday {
   label: string
 }
 
+/** What a one-day exception does to an otherwise normal school day. */
+export type DayOverrideKind = 'off' | 'short'
+
+/**
+ * A single-date exception that beats the weekly timetable.
+ *
+ * It exists because real school days are not always the ones in the timetable:
+ * a surprise 재량휴업일, a field trip, an exam-day short schedule. The override
+ * is keyed by date, so it disappears on its own the next morning.
+ */
+export interface DayOverride {
+  /** `off` = no classes today, `short` = today ends earlier than usual. */
+  kind: DayOverrideKind
+  /** Free-text reason shown in the day badge (e.g. `재량휴업`). */
+  label: string
+  /** `HH:MM` KST dismissal for `kind: 'short'`; empty for `kind: 'off'`. */
+  dismissalTime: string
+}
+
 export interface UserSettings {
   /** Bumped whenever the persisted shape changes (see `src/lib/settings.ts`). */
   version: number
@@ -50,12 +69,24 @@ export interface UserSettings {
   semesterStart: string
   /** 방학 시작일 `YYYY-MM-DD`. */
   vacationDate: string
+  /**
+   * `true` while the semester window is derived from the Korean school calendar
+   * (`src/lib/semesterWindow.ts`) and refreshed on every load. Turning it off
+   * keeps the teacher's own dates.
+   */
+  semesterAuto: boolean
   themeMode: ThemeMode
   soundEnabled: boolean
   notifyEnabled: boolean
+  /** 예비종: warn this many minutes before a class starts. */
+  preAlertEnabled: boolean
+  /** Minutes before the bell (1–15). */
+  preAlertMinutes: number
   /** Weekday indices that count as school days (0 = Sunday … 6 = Saturday). */
   schoolDays: number[]
   holidays: Holiday[]
+  /** `YYYY-MM-DD` → one-day exception. Expired entries are pruned on load. */
+  dayOverrides: Record<string, DayOverride>
   /** Weekday index (as a string key) → timetable. */
   timetables: Record<string, DayTimetable>
 }
@@ -110,7 +141,7 @@ export interface DayOutline {
   spanSeconds: number
 }
 
-export type DayType = 'school' | 'no-classes' | 'weekend' | 'holiday' | 'vacation' | 'before-semester'
+export type DayType = 'school' | 'no-classes' | 'weekend' | 'holiday' | 'vacation' | 'before-semester' | 'override'
 
 export interface DayContext {
   dayType: DayType
@@ -180,7 +211,7 @@ export interface SemesterMetrics {
 export interface NextDayOff {
   dateKey: string
   label: string
-  reason: 'weekend' | 'holiday' | 'vacation'
+  reason: 'weekend' | 'holiday' | 'vacation' | 'override'
   daysUntil: number
   /** Whole seconds from `now` until KST midnight of that day. */
   secondsUntil: number
@@ -315,7 +346,22 @@ export const TIMETABLE_PRESETS: TimetablePreset[] = [
   },
 ]
 
-export const SETTINGS_VERSION = 2
+export const SETTINGS_VERSION = 3
+
+/** 예비종 fires this many minutes before a class by default. */
+export const DEFAULT_PRE_ALERT_MINUTES = 3
+/** Choices offered by the settings UI (minutes before the bell). */
+export const PRE_ALERT_MINUTE_OPTIONS = [1, 3, 5, 10]
+export const MIN_PRE_ALERT_MINUTES = 1
+export const MAX_PRE_ALERT_MINUTES = 15
+
+/**
+ * The semester window that older builds shipped as their *defaults*. Payloads
+ * still carrying exactly these dates were never edited by hand, so the v2 → v3
+ * migration is free to switch them over to the automatic window.
+ */
+export const LEGACY_DEFAULT_SEMESTER_START = '2026-08-25'
+export const LEGACY_DEFAULT_VACATION_DATE = '2026-12-31'
 
 function timetable(periods: TimetablePeriod[], enabled = true): DayTimetable {
   return { enabled, periods: periods.map((period) => ({ ...period })) }
@@ -335,16 +381,27 @@ export function createDefaultTimetables(): Record<string, DayTimetable> {
   }
 }
 
-export const DEFAULT_SETTINGS: UserSettings = {
+/**
+ * Every setting except the semester window.
+ *
+ * The window itself cannot live here: it is derived from today's date
+ * (`createDefaultSettings()` in `src/lib/settings.ts`), which is what keeps a
+ * fresh install usable in any year instead of freezing on one hard-coded
+ * semester.
+ */
+export type StaticSettings = Omit<UserSettings, 'semesterStart' | 'vacationDate' | 'semesterAuto'>
+
+export const BASE_SETTINGS: StaticSettings = {
   version: SETTINGS_VERSION,
   displayName: '김선생님',
   dismissalTime: '16:30',
-  semesterStart: '2026-08-25',
-  vacationDate: '2026-12-31',
   themeMode: 'dark',
   soundEnabled: true,
   notifyEnabled: false,
+  preAlertEnabled: true,
+  preAlertMinutes: DEFAULT_PRE_ALERT_MINUTES,
   schoolDays: [...DEFAULT_SCHOOL_DAYS],
   holidays: [],
+  dayOverrides: {},
   timetables: createDefaultTimetables(),
 }

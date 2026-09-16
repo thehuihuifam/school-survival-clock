@@ -88,9 +88,15 @@ export function BatteryCard({ metrics, isTodaySchoolDay }: BatteryCardProps) {
 
       <div className="battery-reading">
         <div className="reading-block">
-          <p className="reading-label">방학까지</p>
-          <p className="dday-value">D-{metrics.calendarDaysRemaining}<span>일</span></p>
-          <p className="reading-sub">남은 수업일 {metrics.schoolDaysRemaining}일</p>
+          <p className="reading-label">{metrics.phase === 'vacation' ? '방학 진행 중' : '방학까지'}</p>
+          {metrics.phase === 'vacation'
+            ? <p className="dday-value is-vacation">방학 중</p>
+            : <p className="dday-value">D-{metrics.calendarDaysRemaining}<span>일</span></p>}
+          <p className="reading-sub">
+            {metrics.phase === 'vacation'
+              ? '수업일 계산은 개학일에 다시 시작됩니다'
+              : `남은 수업일 ${metrics.schoolDaysRemaining}일`}
+          </p>
         </div>
         <div className="reading-block charge-reading">
           <p className="reading-label">생존 배터리 충전율</p>
