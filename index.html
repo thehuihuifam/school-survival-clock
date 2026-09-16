@@ -2,11 +2,41 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#09090b" />
     <meta name="color-scheme" content="dark light" />
-    <meta name="description" content="선생님의 하루를 위한 생존 배터리와 방학 D-Day 대시보드" />
+    <meta
+      name="description"
+      content="한국 교사를 위한 실시간 생존 시계. KST 라이브 시계, 요일별 시간표 레이더, 쉬는 시간·하교 알림, 학기 생존 배터리와 방학 D-Day를 한 화면에서."
+    />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="생존 배터리" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="교사 생존 배터리" />
+    <meta property="og:title" content="교사 생존 배터리 &amp; 방학 D-Day" />
+    <meta
+      property="og:description"
+      content="수업·쉬는 시간·하교까지, 오늘의 리듬을 실시간으로 보여주는 생존 대시보드."
+    />
+    <meta property="og:locale" content="ko_KR" />
+    <meta property="og:image" content="https://thehuihuifam.github.io/school-survival-clock/icon-512.png" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="교사 생존 배터리 &amp; 방학 D-Day" />
+    <meta
+      name="twitter:description"
+      content="수업·쉬는 시간·하교까지, 오늘의 리듬을 실시간으로 보여주는 생존 대시보드."
+    />
+
     <title>교사 생존 배터리 &amp; 방학 D-Day</title>
+
+    <link rel="icon" type="image/svg+xml" href="./icon.svg" />
+    <link rel="alternate icon" type="image/png" sizes="192x192" href="./icon-192.png" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
@@ -18,7 +48,44 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400;500&display=swap"
     />
-    <script src="https://code.iconify.design/iconify-icon/2.3.0/iconify-icon.min.js" defer></script>
+
+    <script>
+      // Paint-time theme bootstrap: resolve the stored theme *before* the first
+      // frame so dark-mode users never see a white flash while React boots.
+      ;(function () {
+        try {
+          var raw =
+            localStorage.getItem('school-survival-clock.settings.v2') ||
+            localStorage.getItem('teacher-survival-dashboard-settings')
+          var mode = 'dark'
+          if (raw) {
+            var parsed = JSON.parse(raw)
+            if (parsed && typeof parsed.themeMode === 'string') {
+              mode = parsed.themeMode
+            } else if (parsed && parsed.theme === 'light') {
+              mode = 'light'
+            }
+          }
+          var resolved =
+            mode === 'system'
+              ? window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches
+                ? 'light'
+                : 'dark'
+              : mode === 'light'
+                ? 'light'
+                : 'dark'
+          var root = document.documentElement
+          root.setAttribute('data-theme', resolved)
+          root.style.colorScheme = resolved
+          var meta = document.querySelector('meta[name="theme-color"]')
+          if (meta) {
+            meta.setAttribute('content', resolved === 'light' ? '#f6f7f5' : '#09090b')
+          }
+        } catch (error) {
+          // Blocked storage or an unexpected payload: the app defaults to dark.
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>
