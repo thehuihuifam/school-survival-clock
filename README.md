@@ -5,12 +5,17 @@
 ## 주요 기능
 
 - KST 기준 실시간 디지털 시계와 설정 가능한 퇴근 카운트다운
+- 벽시계 초에 맞춰 갱신되고, 백그라운드 탭에서 돌아오면 즉시 현재 시각으로 복귀하는 타이머
 - 학기 시작일에서 방학 시작일까지 계산되는 생존 배터리 게이지
+- 주말과 사용자가 등록한 휴일을 자동으로 감지하는 회복 모드
 - 현재 교시, 쉬는 시간, 점심시간, 다음 전환까지 남은 시간 표시
+- 교시 1~6, 점심, 퇴근 시각을 직접 바꿀 수 있는 개인 시간표 편집기
+- 수업일을 기준으로 계산하는 배터리 진행률과 방학 D-Day(달력 기준)
 - 30분 자동 갱신 및 수동 갱신이 가능한 선생님 공감 메시지
-- 이름, 퇴근 시각, 학기 시작일, 방학 시작일 LocalStorage 저장
+- 이름, 퇴근 시각, 학기 시작일, 방학 시작일, 시간표, 휴일 LocalStorage 저장
 - 다크/라이트 모드, 전체 화면 보기, 퇴근 시각의 캔버스 컨페티 축하
 - 반응형 레이아웃과 키보드 접근성을 고려한 설정 모달
+- 첫 방문 후 앱 셸과 정적 리소스를 캐시하는 오프라인 재방문 지원
 
 ## 실행
 
@@ -28,12 +33,23 @@ npm run preview
 
 ## 배포 (GitHub Pages)
 
-`main` 브랜치에 push하면 GitHub Actions(`.github/workflows/deploy.yml`)가 빌드 후 GitHub Pages에 자동 배포합니다.
+`main` 또는 Arena 작업 브랜치에 push하면 GitHub Actions(`.github/workflows/deploy.yml`)가 빌드 후 GitHub Pages에 자동 배포합니다.
 
-- 배포 주소: `https://<github-사용자명>.github.io/school-survival-clock/`
-- CI 빌드에서는 `vite.config.ts`의 `base`가 `/school-survival-clock/`로 설정되고, 로컬 개발/미리보기는 기존처럼 `/`를 사용합니다.
+- 배포 주소: `https://thehuihuifam.github.io/school-survival-clock/`
+- Vite는 모든 생성 리소스를 상대 경로로 빌드하므로 저장소 하위 경로에서도 새로고침이 안전합니다.
 - 최초 1회는 저장소 **Settings > Pages > Build and deployment > Source**를 **GitHub Actions**로 지정해야 합니다.
 - 수동 재배포가 필요하면 Actions 탭에서 **Deploy to GitHub Pages** 워크플로를 `workflow_dispatch`로 실행할 수 있습니다.
+
+## 설정 팁
+
+설정 모달에서 다음 값을 개인 환경에 맞게 입력할 수 있습니다.
+
+- `오늘 퇴근 시각`: 카운트다운의 종료 시각이자 방과후/업무 시간의 끝
+- `나의 시간표`: 1~6교시의 시작·종료 시각과 점심시간
+- `학교가 쉬는 날`: 주말 외 휴일을 `YYYY-MM-DD`로 쉼표 또는 줄바꿈 구분
+- 학기 시작일과 방학 시작일: 배터리 진행률의 기준 구간
+
+입력 시간이 겹치거나 퇴근 시각이 마지막 일정보다 빠르면 저장할 수 없으며, 손상된 LocalStorage 값은 안전한 기본값으로 복구됩니다.
 
 ## 디자인 시스템
 
@@ -52,3 +68,4 @@ npm run preview
 - Tailwind CSS
 - Iconify (Solar 아이콘 세트) + Pretendard / Geist / Geist Mono
 - Canvas Confetti
+- Service Worker 캐시 + LocalStorage

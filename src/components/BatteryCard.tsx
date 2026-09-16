@@ -4,6 +4,7 @@ import type { BatteryMetrics } from '../types'
 
 interface BatteryCardProps {
   metrics: BatteryMetrics
+  isRestDay: boolean
 }
 
 interface BatteryTone {
@@ -32,10 +33,9 @@ function formatShortDate(date: string) {
 
 const revealStyle = { '--index': 3 } as CSSProperties
 
-export function BatteryCard({ metrics }: BatteryCardProps) {
+export function BatteryCard({ metrics, isRestDay }: BatteryCardProps) {
   const tone = getBatteryTone(metrics.progress)
   const progress = metrics.progress.toFixed(2)
-  // width 대신 transform: scaleX()로 애니메이션 (합성 레이어에서만 동작)
   const fillRatio = Math.min(1, Math.max(0.012, metrics.progress / 100))
   const fillStyle = { '--fill': fillRatio } as CSSProperties
 
@@ -73,7 +73,7 @@ export function BatteryCard({ metrics }: BatteryCardProps) {
           <p className="dday-value">D-{metrics.daysRemaining}<span>일</span></p>
         </div>
         <div className="charge-reading">
-          <p className="reading-label">생존 배터리 충전율</p>
+          <p className="reading-label">수업일 기준 생존 배터리</p>
           <p className="charge-value">{progress}<span>%</span></p>
         </div>
       </div>
@@ -84,7 +84,10 @@ export function BatteryCard({ metrics }: BatteryCardProps) {
         <span>{formatShortDate(metrics.vacationDate)} 방학 시작</span>
       </div>
       <div className="battery-footnote">
-        <span className="tone-dot" /> {tone.label} · 하루씩 차곡차곡 충전 중
+        <span className="tone-dot" />
+        {isRestDay
+          ? `오늘은 쉬는 날 · 수업일 ${metrics.elapsedSchoolDays}/${metrics.totalSchoolDays}일 기준`
+          : `${tone.label} · 수업일 ${metrics.elapsedSchoolDays}/${metrics.totalSchoolDays}일 차곡차곡 충전 중`}
       </div>
     </section>
   )

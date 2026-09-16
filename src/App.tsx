@@ -12,10 +12,11 @@ import { SnapshotCard } from './components/SnapshotCard'
 import {
   formatDuration,
   getBatteryMetrics,
+  getEffectiveDismissalSeconds,
   getKstSeconds,
   getKstTimeParts,
   getPeriodStatus,
-  parseTimeToSeconds,
+  getSchoolDayContext,
 } from './lib/time'
 import { loadSettings, saveSettings } from './lib/storage'
 import { useRevealOnScroll } from './lib/reveal'
@@ -39,27 +40,69 @@ function App() {
   useRevealOnScroll()
 
   useEffect(() => {
-    const interval = window.setInterval(() => setNow(new Date()), 1000)
-    return () => window.clearInterval(interval)
+    let timeoutId: number | undefined
+
+    const syncClock = () => {
+      if (timeoutId !== undefined) {
+        window.clearTimeout(timeoutId)
+      }
+      setNow(new Date())
+      const millisecondsUntilNextSecond = 1000 - (Date.now() % 1000) + 16
+      timeoutId = window.setTimeout(syncClock, millisecondsUntilNextSecond)
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        syncClock()
+      }
+    }
+
+    syncClock()
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      if (timeoutId !== undefined) {
+        window.clearTimeout(timeoutId)
+      }
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
   }, [])
 
   useEffect(() => {
     saveSettings(settings)
     document.documentElement.style.colorScheme = settings.theme
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', settings.theme === 'dark' ? '#09090b' : '#fafafa')
   }, [settings])
 
   const kstNow = useMemo(() => getKstTimeParts(now), [now])
   const currentSeconds = getKstSeconds(kstNow)
-  const dismissalSeconds = parseTimeToSeconds(settings.dismissalTime)
-  const countdownSeconds = Math.max(0, dismissalSeconds - currentSeconds)
+  const schoolDay = useMemo(
+    () => getSchoolDayContext(kstNow, settings.holidayDates),
+    [kstNow, settings.holidayDates],
+  )
+  const dismissalSeconds = getEffectiveDismissalSeconds(
+    settings.dismissalTime,
+    settings.schedule,
+    settings.lunchStart,
+    settings.lunchEnd,
+  )
   const batteryMetrics = useMemo(
-    () => getBatteryMetrics(kstNow, settings.semesterStart, settings.vacationDate),
-    [kstNow, settings.semesterStart, settings.vacationDate],
+    () => getBatteryMetrics(kstNow, settings.semesterStart, settings.vacationDate, settings.holidayDates),
+    [kstNow, settings.semesterStart, settings.vacationDate, settings.holidayDates],
   )
   const periodStatus = useMemo(
-    () => getPeriodStatus(currentSeconds, settings.dismissalTime),
-    [currentSeconds, settings.dismissalTime],
+    () => getPeriodStatus(
+      currentSeconds,
+      settings.dismissalTime,
+      settings.schedule,
+      settings.lunchStart,
+      settings.lunchEnd,
+      schoolDay,
+    ),
+    [currentSeconds, schoolDay, settings.dismissalTime, settings.lunchEnd, settings.lunchStart, settings.schedule],
   )
+  const countdownSeconds = schoolDay.isSchoolDay
+    ? Math.max(0, dismissalSeconds - currentSeconds)
+    : 0
 
   const triggerCelebration = useCallback(() => {
     setIsCelebrationVisible(true)
@@ -99,7 +142,7 @@ function App() {
   useEffect(() => {
     const previous = previousMomentRef.current
     const celebrationKey = `${kstNow.dateKey}-${settings.dismissalTime}`
-    const crossedDismissal = previous &&
+    const crossedDismissal = schoolDay.isSchoolDay && previous &&
       previous.dateKey === kstNow.dateKey &&
       previous.seconds < dismissalSeconds &&
       currentSeconds >= dismissalSeconds
@@ -110,13 +153,17 @@ function App() {
     }
 
     previousMomentRef.current = { dateKey: kstNow.dateKey, seconds: currentSeconds }
-  }, [currentSeconds, dismissalSeconds, kstNow.dateKey, settings.dismissalTime, triggerCelebration])
+  }, [currentSeconds, dismissalSeconds, kstNow.dateKey, schoolDay.isSchoolDay, settings.dismissalTime, triggerCelebration])
 
   useEffect(() => {
-    document.title = periodStatus.isAfterSchool
-      ? '퇴근 완료 · 교사 생존 배터리'
-      : `${formatDuration(countdownSeconds)} 남음 · 교사 생존 배터리`
-  }, [countdownSeconds, periodStatus.isAfterSchool])
+    document.title = schoolDay.isWeekend
+      ? '주말 휴식 · 교사 생존 배터리'
+      : schoolDay.isHoliday
+        ? '휴일 모드 · 교사 생존 배터리'
+        : periodStatus.isAfterSchool
+          ? '퇴근 완료 · 교사 생존 배터리'
+          : `${formatDuration(countdownSeconds)} 남음 · 교사 생존 배터리`
+  }, [countdownSeconds, periodStatus.isAfterSchool, schoolDay.isHoliday, schoolDay.isWeekend])
 
   useEffect(() => {
     const handleFullscreenChange = () => setIsFullscreen(Boolean(document.fullscreenElement))
@@ -169,7 +216,10 @@ function App() {
               <p className="intro-kicker">A LITTLE POWER FOR A BIG DAY</p>
               <h2>오늘도 무사히, 선생님.</h2>
             </div>
-            <div className="intro-side-note"><SolarIcon name="hand-heart-bold" size={16} /> 선생님의 하루를 응원하는 중</div>
+            <div className="intro-side-note">
+              <SolarIcon name="hand-heart-bold" size={16} />
+              {schoolDay.isSchoolDay ? '선생님의 하루를 응원하는 중' : `${schoolDay.label} · 회복을 응원하는 중`}
+            </div>
           </section>
 
           <section className="hero-grid">
@@ -178,15 +228,23 @@ function App() {
               displayName={settings.displayName}
               dismissalTime={settings.dismissalTime}
               countdownSeconds={countdownSeconds}
+              status={periodStatus}
             />
-            <BatteryCard metrics={batteryMetrics} />
+            <BatteryCard metrics={batteryMetrics} isRestDay={schoolDay.isSchoolDay === false} />
           </section>
 
-          <PeriodTracker now={kstNow} dismissalTime={settings.dismissalTime} status={periodStatus} />
+          <PeriodTracker
+            now={kstNow}
+            dismissalTime={settings.dismissalTime}
+            status={periodStatus}
+            schedule={settings.schedule}
+            lunchStart={settings.lunchStart}
+            lunchEnd={settings.lunchEnd}
+          />
 
           <section className="lower-grid">
             <QuoteCard />
-            <SnapshotCard dismissalTime={settings.dismissalTime} metrics={batteryMetrics} />
+            <SnapshotCard dismissalTime={settings.dismissalTime} metrics={batteryMetrics} status={periodStatus} />
           </section>
         </main>
 

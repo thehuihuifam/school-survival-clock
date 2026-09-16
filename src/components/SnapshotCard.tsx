@@ -1,15 +1,26 @@
 import type { CSSProperties } from 'react'
 import { SolarIcon } from './Icon'
-import type { BatteryMetrics } from '../types'
+import type { BatteryMetrics, PeriodStatus } from '../types'
 
 interface SnapshotCardProps {
   dismissalTime: string
   metrics: BatteryMetrics
+  status: PeriodStatus
 }
 
 const revealStyle = { '--index': 2 } as CSSProperties
 
-export function SnapshotCard({ dismissalTime, metrics }: SnapshotCardProps) {
+function getModeLabel(status: PeriodStatus) {
+  if (status.isOffDay) {
+    return '회복 모드'
+  }
+  if (status.isAfterSchool) {
+    return '퇴근 완료'
+  }
+  return status.label
+}
+
+export function SnapshotCard({ dismissalTime, metrics, status }: SnapshotCardProps) {
   return (
     <section className="surface-card snapshot-card reveal reveal-on-scroll" style={revealStyle}>
       <div className="snapshot-header">
@@ -23,8 +34,8 @@ export function SnapshotCard({ dismissalTime, metrics }: SnapshotCardProps) {
       <div className="snapshot-list">
         <div className="snapshot-row">
           <span className="snapshot-row-icon accent"><SolarIcon name="target-bold" size={17} /></span>
-          <div><span>퇴근 목표</span><strong>{dismissalTime} <small>KST</small></strong></div>
-          <span className="snapshot-row-status">정시 도전</span>
+          <div><span>오늘의 모드</span><strong>{getModeLabel(status)}</strong></div>
+          <span className="snapshot-row-status">{status.isOffDay ? '회복 중' : status.isAfterSchool ? '완료' : '진행 중'}</span>
         </div>
         <div className="snapshot-row">
           <span className="snapshot-row-icon warn"><SolarIcon name="calendar-mark-bold" size={17} /></span>
@@ -33,8 +44,8 @@ export function SnapshotCard({ dismissalTime, metrics }: SnapshotCardProps) {
         </div>
         <div className="snapshot-row">
           <span className="snapshot-row-icon pale"><SolarIcon name="history-2-bold" size={17} /></span>
-          <div><span>생존 루틴</span><strong>한 시간씩, 한 교시씩</strong></div>
-          <span className="snapshot-row-status">잘하고 있어요</span>
+          <div><span>퇴근 목표</span><strong>{dismissalTime} <small>KST</small></strong></div>
+          <span className="snapshot-row-status">정시 도전</span>
         </div>
       </div>
 

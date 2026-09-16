@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - arena/01a0aab6-school-survival-clock
   workflow_dispatch:
 
 # GITHUB_TOKEN permissions required by actions/configure-pages + actions/deploy-pages

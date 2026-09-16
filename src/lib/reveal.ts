@@ -3,12 +3,7 @@ import { useEffect } from 'react'
 export const REVEAL_SELECTOR = '.reveal-on-scroll'
 export const REVEAL_VISIBLE_CLASS = 'is-visible'
 
-/**
- * `.reveal-on-scroll` 요소를 IntersectionObserver로 관찰해
- * 뷰포트에 들어온 순간 `is-visible`을 붙이고 관찰을 해제한다.
- * scroll 이벤트 리스너는 쓰지 않는다.
- */
-export function useRevealOnScroll(dependencies: unknown[] = []) {
+export function useRevealOnScroll() {
   useEffect(() => {
     if (typeof document === 'undefined') {
       return
@@ -40,6 +35,5 @@ export function useRevealOnScroll(dependencies: unknown[] = []) {
     targets.forEach((target) => observer.observe(target))
 
     return () => observer.disconnect()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, dependencies)
+  }, [])
 }

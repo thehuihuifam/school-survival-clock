@@ -1,25 +1,33 @@
 import type { CSSProperties } from 'react'
 import { formatDuration, formatKstDate, formatKstTime } from '../lib/time'
 import { SolarIcon } from './Icon'
-import type { KstTimeParts } from '../types'
+import type { KstTimeParts, PeriodStatus } from '../types'
 
 interface ClockHeroProps {
   now: KstTimeParts
   displayName: string
   dismissalTime: string
   countdownSeconds: number
+  status: PeriodStatus
 }
 
 const revealStyle = { '--index': 2 } as CSSProperties
+
+function getAvatarLabel(displayName: string) {
+  const lastWord = displayName.trim().split(/\s+/).at(-1) ?? ''
+  const name = lastWord.replace(/선생님$|교사$/, '')
+  return name.charAt(0) || '선'
+}
 
 export function ClockHero({
   now,
   displayName,
   dismissalTime,
   countdownSeconds,
+  status,
 }: ClockHeroProps) {
-  const hasDismissed = countdownSeconds === 0 &&
-    (now.hour * 60 + now.minute >= Number(dismissalTime.split(':')[0]) * 60 + Number(dismissalTime.split(':')[1]))
+  const hasDismissed = status.isAfterSchool
+  const isOffDay = status.isOffDay
 
   return (
     <section className="surface-card clock-card reveal" style={revealStyle}>
@@ -42,32 +50,37 @@ export function ClockHero({
         <span>{formatKstDate(now)}</span>
       </div>
 
-      <div className={`countdown-panel ${hasDismissed ? 'countdown-complete' : ''}`}>
+      <div className={`countdown-panel ${hasDismissed ? 'countdown-complete' : ''} ${isOffDay ? 'countdown-rest' : ''}`}>
         <div className="countdown-copy">
           <div className="countdown-icon">
-            {hasDismissed
-              ? <SolarIcon name="check-circle-bold" size={18} />
-              : <SolarIcon name="alarm-bold" size={18} />}
+            {isOffDay
+              ? <SolarIcon name="cup-hot-bold" size={18} />
+              : hasDismissed
+                ? <SolarIcon name="check-circle-bold" size={18} />
+                : <SolarIcon name="alarm-bold" size={18} />}
           </div>
           <div>
-            <p className="countdown-label">오늘 퇴근(하교)까지 남은 시간</p>
+            <p className="countdown-label">{isOffDay ? '오늘의 학교 모드' : '오늘 퇴근(하교)까지 남은 시간'}</p>
             <p className="countdown-helper">
-              {hasDismissed ? '오늘도 무사히 미션 클리어!' : `정시 퇴근 목표 · ${dismissalTime}`}
+              {isOffDay ? status.timeLabel : hasDismissed ? '오늘도 무사히 미션 클리어!' : `정시 퇴근 목표 · ${dismissalTime}`}
             </p>
           </div>
         </div>
-        <strong className="countdown-value">{formatDuration(countdownSeconds)}</strong>
+        <strong className="countdown-value">{isOffDay ? '휴식 DAY' : formatDuration(countdownSeconds)}</strong>
       </div>
 
       <div className="clock-footer">
         <div className="teacher-greeting">
-          <div className="avatar-chip" aria-hidden="true">김</div>
+          <div className="avatar-chip" aria-hidden="true">{getAvatarLabel(displayName)}</div>
           <div>
             <span className="muted-label">TODAY&apos;S CREW</span>
             <strong>{displayName || '오늘도 빛나는 선생님'}</strong>
           </div>
         </div>
-        <div className="tiny-status"><SolarIcon name="stars-minimalistic-bold" size={14} /> 무사 생존 모드</div>
+        <div className="tiny-status">
+          <SolarIcon name="stars-minimalistic-bold" size={14} />
+          {isOffDay ? '회복 모드' : '무사 생존 모드'}
+        </div>
       </div>
     </section>
   )

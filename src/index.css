@@ -35,7 +35,8 @@ body {
 }
 
 button,
-input {
+input,
+textarea {
   font: inherit;
 }
 
@@ -53,7 +54,8 @@ button:active {
 }
 
 button:focus-visible,
-input:focus-visible {
+input:focus-visible,
+textarea:focus-visible {
   outline: 2px solid rgba(52, 211, 153, 0.6);
   outline-offset: 3px;
 }
@@ -560,6 +562,25 @@ main {
   background: linear-gradient(100deg, rgba(110, 231, 183, 0.13), rgba(52, 211, 153, 0.04));
 }
 
+.countdown-panel.countdown-rest {
+  border-color: rgba(230, 173, 96, 0.25);
+  background: linear-gradient(100deg, rgba(230, 173, 96, 0.13), rgba(230, 173, 96, 0.035));
+}
+
+.countdown-rest .countdown-icon {
+  color: var(--status-warn);
+  border-color: rgba(230, 173, 96, 0.28);
+  background: rgba(230, 173, 96, 0.12);
+}
+
+.countdown-rest .countdown-value {
+  color: var(--status-warn);
+  font-family: var(--font-sans);
+  font-size: clamp(18px, 2.5vw, 27px);
+  letter-spacing: -0.06em;
+  white-space: nowrap;
+}
+
 .countdown-copy,
 .teacher-greeting,
 .battery-title-lockup,
@@ -914,6 +935,11 @@ main {
   padding: 27px 30px 21px;
 }
 
+.period-card-off-day .period-note-icon {
+  color: var(--status-warn);
+  background: rgba(230, 173, 96, 0.13);
+}
+
 .period-header {
   align-items: flex-start;
 }
@@ -944,6 +970,12 @@ main {
 }
 
 .period-now-badge.is-break {
+  color: var(--status-warn);
+  border-color: rgba(230, 173, 96, 0.24);
+  background: rgba(230, 173, 96, 0.08);
+}
+
+.period-now-badge.is-off-day {
   color: var(--status-warn);
   border-color: rgba(230, 173, 96, 0.24);
   background: rgba(230, 173, 96, 0.08);
@@ -1413,7 +1445,8 @@ main {
   color: var(--accent);
 }
 
-.settings-field input {
+.settings-field input,
+.settings-field textarea {
   display: block;
   width: 100%;
   min-height: 46px;
@@ -1426,11 +1459,21 @@ main {
   transition: border-color 400ms var(--ease-out-expo), box-shadow 400ms var(--ease-out-expo), background 400ms var(--ease-out-expo);
 }
 
-.settings-field input::placeholder {
+.settings-field textarea {
+  min-height: 68px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.settings-field input::placeholder,
+.settings-field textarea::placeholder {
   color: var(--faint);
 }
 
-.settings-field input:focus {
+.settings-field input:focus,
+.settings-field textarea:focus {
   border-color: rgba(52, 211, 153, 0.55);
   background: var(--surface);
   box-shadow: inset 0 0 0 3px rgba(52, 211, 153, 0.12);
@@ -1447,6 +1490,75 @@ main {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 17px;
+}
+
+.settings-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 25px;
+  padding-top: 19px;
+  border-top: 1px solid var(--border);
+}
+
+.settings-section-heading > div {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+.settings-section-heading iconify-icon {
+  color: var(--accent);
+}
+
+.settings-section-heading > span {
+  color: var(--faint);
+  font-size: 9px;
+  text-align: right;
+}
+
+.schedule-editor {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.schedule-row {
+  display: grid;
+  grid-template-columns: 52px repeat(2, minmax(0, 1fr));
+  align-items: center;
+  gap: 8px;
+}
+
+.schedule-row-label {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.schedule-row input {
+  min-height: 39px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.schedule-special-times {
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.settings-error {
+  margin: 18px 0 0;
+  padding: 11px 12px;
+  color: #f7c5d6;
+  border: 1px solid rgba(244, 143, 177, 0.24);
+  border-radius: 11px;
+  background: rgba(244, 143, 177, 0.08);
+  font-size: 10px;
+  line-height: 1.55;
 }
 
 .modal-actions {
@@ -1553,6 +1665,18 @@ main {
   flex: 0 0 27px;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.07);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 @keyframes fade-in-up {
@@ -1822,6 +1946,15 @@ main {
   .settings-form-grid {
     grid-template-columns: 1fr;
     gap: 0;
+  }
+
+  .settings-section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .settings-section-heading > span {
+    text-align: left;
   }
 
   .settings-modal {

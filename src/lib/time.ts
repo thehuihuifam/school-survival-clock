@@ -1,4 +1,13 @@
-import type { BatteryMetrics, KstTimeParts, PeriodDefinition, PeriodStatus } from '../types'
+import { DEFAULT_LUNCH, DEFAULT_SCHEDULE } from '../types'
+import type {
+  BatteryMetrics,
+  DayOffReason,
+  KstTimeParts,
+  PeriodDefinition,
+  PeriodStatus,
+  SchedulePeriod,
+  SchoolDayContext,
+} from '../types'
 
 const SEOUL_TIME_ZONE = 'Asia/Seoul'
 const DAY_IN_MS = 24 * 60 * 60 * 1000
@@ -29,6 +38,7 @@ export function getKstTimeParts(date: Date): KstTimeParts {
   const hour = Number(parts.hour) % 24
   const minute = Number(parts.minute)
   const second = Number(parts.second)
+  const weekdayIndex = new Date(Date.UTC(year, month - 1, day)).getUTCDay()
 
   return {
     year,
@@ -38,6 +48,7 @@ export function getKstTimeParts(date: Date): KstTimeParts {
     minute,
     second,
     weekday: parts.weekday ?? '',
+    weekdayIndex,
     dateKey: `${year}-${pad(month)}-${pad(day)}`,
   }
 }
@@ -54,11 +65,19 @@ export function getKstSeconds(parts: KstTimeParts) {
   return parts.hour * 60 * 60 + parts.minute * 60 + parts.second
 }
 
+export function isValidTimeInput(value: string) {
+  if (!/^\d{2}:\d{2}$/.test(value)) {
+    return false
+  }
+  const [hours, minutes] = value.split(':').map(Number)
+  return hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59
+}
+
 export function parseTimeToSeconds(time: string) {
-  const [hours, minutes] = time.split(':').map(Number)
-  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
+  if (!isValidTimeInput(time)) {
     return 16 * 60 * 60 + 30 * 60
   }
+  const [hours, minutes] = time.split(':').map(Number)
   return hours * 60 * 60 + minutes * 60
 }
 
@@ -71,16 +90,26 @@ export function formatDuration(totalSeconds: number) {
 }
 
 export function formatHmFromSeconds(totalSeconds: number) {
-  const hours = Math.floor(totalSeconds / 3600)
-  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const safeSeconds = Math.max(0, Math.floor(totalSeconds))
+  const hours = Math.floor(safeSeconds / 3600)
+  const minutes = Math.floor((safeSeconds % 3600) / 60)
   return `${pad(hours)}:${pad(minutes)}`
 }
 
-export function parseDateInput(value: string) {
+export function isValidDateInput(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false
+  }
   const [year, month, day] = value.split('-').map(Number)
-  if (!year || !month || !day) {
+  const date = new Date(Date.UTC(year, month - 1, day))
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
+}
+
+export function parseDateInput(value: string) {
+  if (!isValidDateInput(value)) {
     return Number.NaN
   }
+  const [year, month, day] = value.split('-').map(Number)
   return Date.UTC(year, month - 1, day)
 }
 
@@ -97,25 +126,59 @@ export function differenceInDays(later: number, earlier: number) {
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max)
 
+function dateKeyFromUtcMs(value: number) {
+  const date = new Date(value)
+  return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`
+}
+
+function isSchoolDate(value: number, holidaySet: Set<string>) {
+  const dayOfWeek = new Date(value).getUTCDay()
+  return dayOfWeek !== 0 && dayOfWeek !== 6 && !holidaySet.has(dateKeyFromUtcMs(value))
+}
+
+function countSchoolDays(startMs: number, endMs: number, holidaySet: Set<string>) {
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) {
+    return 0
+  }
+
+  let count = 0
+  for (let cursor = startMs; cursor < endMs; cursor += DAY_IN_MS) {
+    if (isSchoolDate(cursor, holidaySet)) {
+      count += 1
+    }
+  }
+  return count
+}
+
 export function getBatteryMetrics(
   today: KstTimeParts,
   semesterStart: string,
   vacationDate: string,
+  holidayDates: string[] = [],
 ): BatteryMetrics {
   const todayMs = parseDateInput(dateInputFromKst(today))
   const startMs = parseDateInput(semesterStart)
   const vacationMs = parseDateInput(vacationDate)
-  const totalDays = Math.max(1, differenceInDays(vacationMs, startMs))
-  const elapsedDays = differenceInDays(todayMs, startMs)
-  const progress = vacationMs <= startMs
-    ? (todayMs >= vacationMs ? 100 : 0)
-    : clamp((elapsedDays / totalDays) * 100, 0, 100)
+  const safeDates = Number.isFinite(startMs) && Number.isFinite(vacationMs)
+  const totalDays = safeDates ? Math.max(1, differenceInDays(vacationMs, startMs)) : 1
+  const elapsedDays = safeDates ? differenceInDays(todayMs, startMs) : 0
+  const holidaySet = new Set(holidayDates)
+  const totalSchoolDays = safeDates ? Math.max(1, countSchoolDays(startMs, vacationMs, holidaySet)) : 1
+  const boundedTodayMs = safeDates ? clamp(todayMs, startMs, vacationMs) : startMs
+  const elapsedSchoolDays = safeDates
+    ? clamp(countSchoolDays(startMs, boundedTodayMs, holidaySet), 0, totalSchoolDays)
+    : 0
+  const progress = !safeDates || vacationMs <= startMs
+    ? (safeDates && todayMs >= vacationMs ? 100 : 0)
+    : clamp((elapsedSchoolDays / totalSchoolDays) * 100, 0, 100)
 
   return {
     progress,
-    daysRemaining: Math.max(0, differenceInDays(vacationMs, todayMs)),
+    daysRemaining: safeDates ? Math.max(0, differenceInDays(vacationMs, todayMs)) : 0,
     totalDays,
     elapsedDays: Math.max(0, elapsedDays),
+    totalSchoolDays,
+    elapsedSchoolDays,
     startDate: semesterStart,
     vacationDate,
   }
@@ -142,69 +205,174 @@ function makePeriod(
   }
 }
 
-export function getTimelineSlots(dismissalTime: string): PeriodDefinition[] {
-  const dismissalSeconds = Math.max(parseTimeToSeconds(dismissalTime), parseTimeToSeconds('14:50'))
-  const dismissalLabel = formatHmFromSeconds(dismissalSeconds)
-  const periods = [
-    makePeriod('period-1', '1교시', '1', '09:00', '09:40'),
-    makePeriod('period-2', '2교시', '2', '09:50', '10:30'),
-    makePeriod('period-3', '3교시', '3', '10:50', '11:30'),
-    makePeriod('period-4', '4교시', '4', '11:40', '12:20'),
-    makePeriod('lunch', '점심시간 및 급식', '점심', '12:20', '13:20'),
-    makePeriod('period-5', '5교시', '5', '13:20', '14:00'),
-    makePeriod('period-6', '6교시', '6', '14:10', '14:50'),
-    makePeriod('after-school', '방과후/업무 시간', '업무', '14:50', dismissalLabel),
+function validSchedulePeriods(schedule: SchedulePeriod[]) {
+  return schedule.length > 0 && schedule.every((period) => {
+    return isValidTimeInput(period.start) && isValidTimeInput(period.end) && parseTimeToSeconds(period.end) > parseTimeToSeconds(period.start)
+  })
+}
+
+function getScheduledBlocks(schedule: SchedulePeriod[], lunchStart: string, lunchEnd: string) {
+  if (!validSchedulePeriods(schedule) || !isValidTimeInput(lunchStart) || !isValidTimeInput(lunchEnd)) {
+    return []
+  }
+
+  const blocks = [
+    ...schedule.map((period) => makePeriod(period.id, period.label, period.shortLabel, period.start, period.end)),
+    makePeriod('lunch', '점심시간 및 급식', '점심', lunchStart, lunchEnd),
   ]
+  return blocks
+    .filter((block) => block.endSeconds > block.startSeconds)
+    .sort((left, right) => left.startSeconds - right.startSeconds)
+}
+
+export function getScheduleEndSeconds(schedule: SchedulePeriod[] = DEFAULT_SCHEDULE, lunchStart = DEFAULT_LUNCH.start, lunchEnd = DEFAULT_LUNCH.end) {
+  const blocks = getScheduledBlocks(schedule, lunchStart, lunchEnd)
+  return blocks.reduce((latest, block) => Math.max(latest, block.endSeconds), 0)
+}
+
+export function isScheduleConfigurationValid(
+  schedule: SchedulePeriod[],
+  lunchStart: string,
+  lunchEnd: string,
+  dismissalTime: string,
+) {
+  if (!validSchedulePeriods(schedule) || !isValidTimeInput(lunchStart) || !isValidTimeInput(lunchEnd) || !isValidTimeInput(dismissalTime)) {
+    return false
+  }
+
+  for (let index = 1; index < schedule.length; index += 1) {
+    if (parseTimeToSeconds(schedule[index].start) < parseTimeToSeconds(schedule[index - 1].end)) {
+      return false
+    }
+  }
+
+  const blocks = getScheduledBlocks(schedule, lunchStart, lunchEnd)
+  if (blocks.length !== schedule.length + 1) {
+    return false
+  }
+
+  for (let index = 1; index < blocks.length; index += 1) {
+    if (blocks[index].startSeconds < blocks[index - 1].endSeconds) {
+      return false
+    }
+  }
+
+  return parseTimeToSeconds(dismissalTime) > getScheduleEndSeconds(schedule, lunchStart, lunchEnd)
+}
+
+export function getEffectiveDismissalSeconds(
+  dismissalTime: string,
+  schedule: SchedulePeriod[] = DEFAULT_SCHEDULE,
+  lunchStart = DEFAULT_LUNCH.start,
+  lunchEnd = DEFAULT_LUNCH.end,
+) {
+  return Math.max(parseTimeToSeconds(dismissalTime), getScheduleEndSeconds(schedule, lunchStart, lunchEnd))
+}
+
+export function getTimelineSlots(
+  dismissalTime: string,
+  schedule: SchedulePeriod[] = DEFAULT_SCHEDULE,
+  lunchStart = DEFAULT_LUNCH.start,
+  lunchEnd = DEFAULT_LUNCH.end,
+): PeriodDefinition[] {
+  const blocks = getScheduledBlocks(schedule, lunchStart, lunchEnd)
+  if (blocks.length === 0) {
+    return []
+  }
+
+  const dismissalSeconds = getEffectiveDismissalSeconds(dismissalTime, schedule, lunchStart, lunchEnd)
+  const lastScheduledEnd = getScheduleEndSeconds(schedule, lunchStart, lunchEnd)
+  const timelineBlocks = dismissalSeconds > lastScheduledEnd
+    ? [...blocks, makePeriod('after-school', '방과후/업무 시간', '업무', formatHmFromSeconds(lastScheduledEnd), formatHmFromSeconds(dismissalSeconds))]
+    : blocks
 
   const slots: PeriodDefinition[] = []
-  periods.forEach((period, index) => {
-    if (period.endSeconds <= period.startSeconds) {
-      return
-    }
-    slots.push(period)
-    const nextPeriod = periods[index + 1]
-    if (nextPeriod && nextPeriod.startSeconds > period.endSeconds) {
-      slots.push(
-        makePeriod(
-          `break-${index + 1}`,
-          '쉬는 시간',
-          '휴식',
-          formatHmFromSeconds(period.endSeconds),
-          formatHmFromSeconds(nextPeriod.startSeconds),
-          'break',
-        ),
-      )
-    }
-  })
+  let previousEnd: number | null = null
+  timelineBlocks
+    .sort((left, right) => left.startSeconds - right.startSeconds)
+    .forEach((block) => {
+      if (previousEnd !== null && block.startSeconds > previousEnd) {
+        slots.push(
+          makePeriod(
+            `break-${slots.length + 1}`,
+            '쉬는 시간',
+            '휴식',
+            formatHmFromSeconds(previousEnd),
+            formatHmFromSeconds(block.startSeconds),
+            'break',
+          ),
+        )
+      }
+      slots.push(block)
+      previousEnd = previousEnd === null ? block.endSeconds : Math.max(previousEnd, block.endSeconds)
+    })
   return slots
 }
 
-export function getPeriodStatus(currentSeconds: number, dismissalTime: string): PeriodStatus {
-  const dismissalSeconds = parseTimeToSeconds(dismissalTime)
-  const slots = getTimelineSlots(dismissalTime)
+export function getSchoolDayContext(today: KstTimeParts, holidayDates: string[] = []): SchoolDayContext {
+  const isWeekend = today.weekdayIndex === 0 || today.weekdayIndex === 6
+  const isHoliday = holidayDates.includes(today.dateKey)
+  const reason: DayOffReason | null = isWeekend ? 'weekend' : isHoliday ? 'holiday' : null
+
+  return {
+    isSchoolDay: reason === null,
+    isWeekend,
+    isHoliday,
+    reason,
+    label: isWeekend ? '주말 휴식' : isHoliday ? '등록한 휴일' : '학교 운영일',
+    dateKey: today.dateKey,
+  }
+}
+
+export function getPeriodStatus(
+  currentSeconds: number,
+  dismissalTime: string,
+  schedule: SchedulePeriod[] = DEFAULT_SCHEDULE,
+  lunchStart = DEFAULT_LUNCH.start,
+  lunchEnd = DEFAULT_LUNCH.end,
+  schoolDay?: SchoolDayContext,
+): PeriodStatus {
+  if (schoolDay && !schoolDay.isSchoolDay) {
+    return {
+      slotId: 'off-day',
+      label: schoolDay.label,
+      timeLabel: schoolDay.reason === 'weekend' ? '주말에는 학교가 쉬어요' : '등록한 휴일에는 학교가 쉬어요',
+      minutesRemaining: 0,
+      isBreak: true,
+      isBeforeSchool: false,
+      isAfterSchool: false,
+      isOffDay: true,
+    }
+  }
+
+  const dismissalSeconds = getEffectiveDismissalSeconds(dismissalTime, schedule, lunchStart, lunchEnd)
+  const slots = getTimelineSlots(dismissalTime, schedule, lunchStart, lunchEnd)
+  const firstScheduledSlot = slots.find((slot) => slot.kind === 'period')
 
   if (currentSeconds >= dismissalSeconds) {
     return {
       slotId: 'after-school-complete',
       label: '오늘 수업 종료',
-      timeLabel: `${dismissalTime} 퇴근 완료`,
+      timeLabel: `${formatHmFromSeconds(dismissalSeconds)} 퇴근 완료`,
       minutesRemaining: 0,
       isBreak: false,
       isBeforeSchool: false,
       isAfterSchool: true,
+      isOffDay: false,
     }
   }
 
-  if (currentSeconds < parseTimeToSeconds('09:00')) {
-    const minutesUntilSchool = Math.max(1, Math.ceil((parseTimeToSeconds('09:00') - currentSeconds) / 60))
+  if (firstScheduledSlot && currentSeconds < firstScheduledSlot.startSeconds) {
+    const minutesUntilSchool = Math.max(1, Math.ceil((firstScheduledSlot.startSeconds - currentSeconds) / 60))
     return {
       slotId: 'before-school',
       label: '수업 시작 전',
-      timeLabel: `09:00까지 ${minutesUntilSchool}분`,
+      timeLabel: `${formatHmFromSeconds(firstScheduledSlot.startSeconds)}까지 ${minutesUntilSchool}분`,
       minutesRemaining: minutesUntilSchool,
       isBreak: false,
       isBeforeSchool: true,
       isAfterSchool: false,
+      isOffDay: false,
     }
   }
 
@@ -222,6 +390,7 @@ export function getPeriodStatus(currentSeconds: number, dismissalTime: string): 
       isBreak: activeSlot.kind === 'break',
       isBeforeSchool: false,
       isAfterSchool: false,
+      isOffDay: false,
     }
   }
 
@@ -238,5 +407,6 @@ export function getPeriodStatus(currentSeconds: number, dismissalTime: string): 
     isBreak: true,
     isBeforeSchool: false,
     isAfterSchool: false,
+    isOffDay: false,
   }
 }
