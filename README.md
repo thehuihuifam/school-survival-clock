@@ -1,54 +1,110 @@
 # 교사 생존 배터리 & 방학 D-Day
 
-한국의 선생님을 위한 데스크 친화형 생존 대시보드입니다. 한국 표준시(KST) 실시간 시계, 퇴근 카운트다운, 학기 생존 배터리, 교시 레이더, 공감 메시지를 한 화면에서 확인할 수 있습니다.
+한국 선생님을 위한 데스크 친화형 생존 대시보드입니다. 한국 표준시(KST) 실시간 시계, 요일별 시간표 레이더, 교시·쉬는 시간·하교 전환 알림, 학기 생존 배터리와 방학 D-Day를 한 화면에서 제공합니다.
+
+- 라이브 사이트: <https://thehuihuifam.github.io/school-survival-clock/>
 
 ## 주요 기능
 
-- KST 기준 실시간 디지털 시계와 설정 가능한 퇴근 카운트다운
-- 학기 시작일에서 방학 시작일까지 계산되는 생존 배터리 게이지
-- 현재 교시, 쉬는 시간, 점심시간, 다음 전환까지 남은 시간 표시
-- 30분 자동 갱신 및 수동 갱신이 가능한 선생님 공감 메시지
-- 이름, 퇴근 시각, 학기 시작일, 방학 시작일 LocalStorage 저장
-- 다크/라이트 모드, 전체 화면 보기, 퇴근 시각의 캔버스 컨페티 축하
-- 반응형 레이아웃과 키보드 접근성을 고려한 설정 모달
+### 시계 · 카운트다운
+- 아시아/서울(KST) 기준 1초 단위 라이브 시계. 디바이스 시간대와 무관하게 동작
+- **드래프트 프리 타이머**: 전용 Web Worker가 초 경계에 맞춰 틱을 생성하고, 탭이 숨겨져 있어도 시간이 밀리지 않음. Worker를 쓸 수 없는 브라우저에서는 동일 알고리즘의 메인 스레드 폴백 + `visibilitychange` 즉시 재동기화
+- 현재 국면(등교 전 / 교시 진행 / 쉬는 시간 / 공백 / 하교 완료)에 맞는 메인 카운트다운과 하루 진행률 바
+- 주말·공휴일·방학·개학 전 상태를 자동 감지해 "다음 등교까지" 카운트다운으로 전환
+
+### 시간표 레이더
+- **요일별 커스텀 시간표**: 교시 이름·구분(수업/점심/재량·동아리/방과후)·시작/종료 시각을 직접 편집
+- 초등 6교시 / 중등 7교시 / 고등 7교시+자습 / 단축 4교시 프리셋, 요일 간 복사, 시간순 정렬
+- 쉬는 시간은 교시 사이 5분 이상 간격에서 자동 생성, 마지막 교시~퇴근 시각은 방과후·업무 블록으로 표시
+- 타임라인 위에 실시간 플레이헤드, 블록별 진행률, 완료/진행/예정 상태
+- NEXT UP 레일: 지금 진행 중인 블록과 다음 일정 3건의 카운트다운 (하교 후에는 다음 등교일 자동 미리보기)
+
+### 알림 · 축하
+- 교시 시작·쉬는 시간·점심·방과후·하교 전환 순간에 **Web Audio 차임벨** (파일 다운로드 없음)
+- 옵션으로 **브라우저 알림** (기본 꺼짐, 권한 요청 후 활성화). 오래 전에 지나간 전환은 재생하지 않음
+- 하교 시각 도달 시 캔버스 컨페티 + 축하 토스트 (컨페티는 코드 스플릿으로 분리, 하교 순간에만 로드)
+
+### 학기 배터리 · 지표
+- 학기 시작일 → 방학 시작일까지 **수업일 기준** 충전율 (주말·등록 휴일 제외)
+- 방학 D-Day, 남은 수업일, 오늘 남은 교시/수업 시간, 하루 진행률, 주간 리듬(며칠차·쉼까지), 통계 스트립
+- 공휴일·재량휴업일 등록(고정 공휴일 일괄 추가 지원), 수업 요일 선택
+
+### 설정 · 데이터
+- 설정은 localStorage에 자동 저장, **다른 탭과 실시간 동기화**, 스키마 검증·마이그레이션(v1 → v2) 내장
+- 설정 JSON 내보내기/불러오기, 기본값 초기화
+- 다크/라이트/시스템 테마(첫 페인트 전 부트스트랩으로 FOUC 없음), 전체 화면, 키보드 단축키(`S` 설정 · `T` 테마 · `F` 전체화면 · `M` 소리 · `N` 알림)
+
+### 복원력 · PWA
+- 서비스 워커: 앱 셸 프리캐시 + 해시 에셋 stale-while-revalidate + 내비게이션 network-first → **오프라인에서도 동작**
+- Web App Manifest·아이콘 포함, 설치 가능(바탕화면 앱), `?open=settings` 딥링크
+- 네트워크 끊김 시 헤더에 OFFLINE 칩 표시
 
 ## 실행
 
 ```bash
 npm install
-npm run dev
+npm run dev        # http://localhost:5173
 ```
 
-프로덕션 빌드는 다음 명령으로 확인합니다.
+품질 점검:
 
 ```bash
-npm run build
-npm run preview
+npm run icons      # src에서 참조된 Solar 아이콘을 인라인 SVG 맵으로 생성
+npm run typecheck  # tsc -b (strict)
+npm test           # vitest 단위 테스트 (스케줄 엔진·학기 수학·설정 정규화 등)
+npm run build      # icons → typecheck → vite build
+npm run preview    # 프로덕션 빌드 미리보기
 ```
+
+앱 아이콘(`public/icon-*.png`)은 `scripts/generate-app-icons.mjs`가 의존성 없이 래스터라이즈합니다. 수정이 필요하면 `node scripts/generate-app-icons.mjs`를 실행하세요.
 
 ## 배포 (GitHub Pages)
 
-`main` 브랜치에 push하면 GitHub Actions(`.github/workflows/deploy.yml`)가 빌드 후 GitHub Pages에 자동 배포합니다.
+`main` 브랜치에 push하면 GitHub Actions(`.github/workflows/deploy.yml`)가 **typecheck → 단위 테스트 → 빌드 → Pages 배포**를 순서대로 실행합니다.
 
 - 배포 주소: `https://<github-사용자명>.github.io/school-survival-clock/`
-- CI 빌드에서는 `vite.config.ts`의 `base`가 `/school-survival-clock/`로 설정되고, 로컬 개발/미리보기는 기존처럼 `/`를 사용합니다.
+- 프로덕션 빌드는 `base: './'`(상대 경로)를 사용하므로 하위 경로 어디에서도 동작합니다. 정적 리소스(CSS/JS/워커/매니페스트/아이콘)는 모두 문서 기준 상대 경로로 해결됩니다.
 - 최초 1회는 저장소 **Settings > Pages > Build and deployment > Source**를 **GitHub Actions**로 지정해야 합니다.
-- 수동 재배포가 필요하면 Actions 탭에서 **Deploy to GitHub Pages** 워크플로를 `workflow_dispatch`로 실행할 수 있습니다.
+- 수동 재배포는 Actions 탭에서 **Deploy to GitHub Pages** 워크플로를 `workflow_dispatch`로 실행하세요.
+
+## 아키텍처
+
+```
+src/
+  lib/
+    time.ts        KST 변환·파싱·포맷 (순수 함수)
+    schedule.ts    요일별 시간표 → 블록/쉬는시간/상태, 휴일·방학 판정, 다음 일정 탐색
+    semester.ts    수업일 기반 배터리 수학
+    timeline.ts    타임라인 레이아웃(비율·플레이헤드)과 NEXT UP 프로젝션
+    settings.ts    localStorage 저장·검증·마이그레이션·내보내기/불러오기·탭 동기화
+    useNow.ts      Worker 기반 드래프트 프리 1Hz 틱 (+ 폴백)
+    tick.worker.ts 배경 탭에서도 살아 있는 하트비트 워커
+    alerts.ts      전환 감지(오래된 이벤트 억제) → 차임/알림 디스패치
+    sound.ts       Web Audio 차임 합성
+    notify.ts      Notification API 래퍼
+    theme.ts       테마 해석·시스템 선호 추적
+    pwa.ts         서비스 워커 등록·설치 프롬프트
+  components/      화면 컴포넌트 + settings/ (탭형 설정 에디터, 포커스 트랩)
+  lib/__tests__/   vitest 단위 테스트
+scripts/           아이콘 생성기 (SVG 인라인 맵, PNG 앱 아이콘)
+public/            manifest, sw.js, 앱 아이콘
+```
 
 ## 디자인 시스템
 
 [Supanova Design Engine](./supanova-design-engine.md) 스펙을 React/Vite 구조에 맞춰 적용했습니다.
 
-- **타이포그래피**: 본문 `Pretendard`, 영문 디스플레이 `Geist`, 숫자/시간 `Geist Mono` 세 가지만 씁니다. 범용 산세리프와 노토 산스 계열은 배제했고, 한글 제목은 `font-weight 700 · letter-spacing -0.035em · line-height 1.25`, 본문에는 `word-break: keep-all`을 적용합니다.
-- **컬러 토큰**: Zinc-950(`#09090b`) 베이스에 Emerald 단일 액센트(`#34d399`)만 사용합니다. 보라/인디고는 쓰지 않고, 상태색은 `--status-warn`, `--status-rose` 두 가지로 제한합니다. 순수 블랙 대신 Zinc-950 계열의 `rgba(9, 9, 11, …)`만 사용합니다.
-- **아이콘**: Iconify Solar 세트만 사용합니다. 화이트리스트는 `src/components/Icon.tsx`의 `SolarIcon` 유니언 타입으로 관리하며 `<iconify-icon>` 웹 컴포넌트를 `index.html`에서 로드합니다.
-- **재질**: 카드마다 `inset 0 1px 0` 하이라이트와 배경 색조에 맞춘 틴티드 섀도를 넣고, 고정된 `feTurbulence` 그레인 오버레이(`.grain-overlay`)와 에메랄드 계열 메시 배경(`.background-mesh`)을 겹쳐 깊이감을 만듭니다. 네온 외부 글로우는 쓰지 않습니다.
-- **모션**: 애니메이션은 `transform`과 `opacity`만 사용합니다. 진입은 `fade-in-up` + `--index` 캐스케이드, 스크롤 게이트는 `src/lib/reveal.ts`의 IntersectionObserver 훅(`scroll` 리스너 없음)이 담당하고, 배터리 게이지는 `width` 대신 `transform: scaleX()`로 전환됩니다. 모든 모션은 `prefers-reduced-motion`에서 해제됩니다.
-- **뷰포트**: 전체 높이 기준은 `100dvh`를 사용하고, 상단 바는 `position: sticky` + `backdrop-filter`로 고정됩니다. 콘텐츠는 `max-width: 80rem` 컨테이너 안에 담깁니다.
+- **타이포그래피**: 본문 `Pretendard`, 영문 디스플레이 `Geist`, 숫자/시간 `Geist Mono`. 한글 제목은 `font-weight 700 · letter-spacing -0.035em · line-height 1.25`, 본문 `word-break: keep-all`.
+- **컬러 토큰**: Zinc-950 계열 베이스 + Emerald 단일 액센트. 상태색은 warn/rose/red 세 가지로 제한하고, 모든 토큰은 `:root[data-theme]`에 정의되어 라이트 모드를 지원합니다.
+- **아이콘**: Iconify Solar 세트를 **빌드 타임에 인라인 SVG로 생성**(`npm run icons`)합니다. 런타임 CDN 스크립트와 아이콘별 네트워크 요청이 없고, 오프라인에서도 아이콘이 보입니다.
+- **재질**: 카드별 `inset 0 1px 0` 하이라이트와 틴티드 섀도, 고정 `feTurbulence` 그레인 오버레이, 에메랄드 메시 배경. 네온 외부 글로우는 사용하지 않습니다.
+- **모션**: `transform`/`opacity`만 사용. 진입은 `fade-in-up` + `--index` 캐스케이드, 스크롤 게이트는 IntersectionObserver 훅(`scroll` 리스너 없음), 게이지는 `width` 대신 `transform: scaleX()`. 모든 모션은 `prefers-reduced-motion`에서 해제됩니다.
+- **뷰포트**: 높이 기준 `100dvh`, 상단 바 `position: sticky` + `backdrop-filter`, 콘텐츠 `max-width: 80rem`.
 
 ## 기술 스택
 
-- Vite + React + TypeScript
-- Tailwind CSS
-- Iconify (Solar 아이콘 세트) + Pretendard / Geist / Geist Mono
-- Canvas Confetti
+- Vite + React + TypeScript (strict)
+- Vitest 단위 테스트
+- Canvas Confetti (하교 축하, 지연 로드)
+- Iconify Solar (빌드 타임 인라인) + Pretendard / Geist / Geist Mono
+- 서비스 워커 + Web App Manifest (PWA)
