@@ -65,7 +65,7 @@ npm run preview
 ## 기술 스택
 
 - Vite + React + TypeScript
-- Tailwind CSS
+- Vite-processed CSS
 - Iconify (Solar 아이콘 세트) + Pretendard / Geist / Geist Mono
 - Canvas Confetti
 - Service Worker 캐시 + LocalStorage
