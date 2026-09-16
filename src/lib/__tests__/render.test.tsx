@@ -63,11 +63,12 @@ describe('App render', () => {
     const html = renderAt('2026-09-17T00:10:00Z') // 목요일 09:10 KST
 
     expect(html).toContain('LIVE CLOCK')
-    expect(html).toContain('방학 D-Day 충전 게이지')
+    expect(html).toContain('방학 D-Day 게이지')
     expect(html).toContain('오늘의 시간표 레이더')
     expect(html).toContain('1교시 진행 중')
-    expect(html).toContain('선생님 공감 비타민')
-    expect(html).toContain('오늘의 생존 스냅샷')
+    // Quote and Snapshot cards removed to reduce duplication
+    expect(html).not.toContain('선생님 공감 비타민')
+    expect(html).not.toContain('오늘의 생존 스냅샷')
   })
 
   it('greets the teacher without repeating the honorific', () => {
@@ -139,7 +140,7 @@ describe('App render', () => {
     })
 
     expect(html).toContain('단축 하교 13:00')
-    expect(html).toContain('오늘 하루 예외')
+    expect(html).toContain('오늘 하루만')
     expect(html).not.toContain('6교시')
   })
 
