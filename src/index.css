@@ -138,15 +138,8 @@ svg{display:inline-block;flex:0 0 auto;vertical-align:-.15em}
 .countdown-bar-fill{position:absolute;inset:0;border-radius:inherit;background:linear-gradient(90deg,var(--accent2),var(--accent));transform-origin:left;transform:scaleX(var(--fill,0));transition:transform .9s var(--ease)}
 .countdown-panel.countdown-pre .countdown-bar-fill{background:linear-gradient(90deg,var(--warn),var(--accent))}
 .countdown-bar-label{position:absolute;right:0;top:8px;font-size:10px;color:var(--faint);letter-spacing:.06em}
-.clock-footer{margin-top:auto;padding-top:16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-.teacher-greeting{display:flex;align-items:center;gap:10px;min-width:0}
-.avatar-chip{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#052e1f;font-weight:700;font-size:13px;flex:0 0 32px}
-.teacher-greeting-copy{min-width:0;display:flex;flex-direction:column;gap:1px}
-.teacher-greeting strong{font-size:13px;font-weight:700;letter-spacing:-.02em;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
-.teacher-greeting-copy span{font-size:11px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tiny-status{font-size:11.5px;color:var(--faint);display:flex;align-items:center;gap:5px}
 /* override bar compact */
-.override-bar{margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.override-bar{margin-top:auto;padding-top:14px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 .override-label{font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--faint);display:flex;align-items:center;gap:5px}
 .override-chips{display:flex;flex-wrap:wrap;gap:6px}
 .override-chip{padding:6px 11px;border-radius:999px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:5px}
@@ -399,7 +392,6 @@ svg{display:inline-block;flex:0 0 auto;vertical-align:-.15em}
   .countdown-panel{grid-template-columns:1fr}
   .countdown-readout{align-items:flex-start}
   .countdown-note{text-align:left}
-  .clock-footer{flex-direction:column;align-items:flex-start;gap:10px}
   .override-note{margin-left:0}
   .period-header{flex-direction:column;align-items:flex-start}
   .period-table-head{display:none}
