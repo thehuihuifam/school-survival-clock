@@ -3,7 +3,7 @@ import { SolarIcon } from '../Icon'
 import { Field, ToggleRow } from './Field'
 import { TIMETABLE_PRESETS, WEEKDAY_LABELS, type DayTimetable, type PeriodKind, type TimetablePeriod } from '../../types'
 import { PERIOD_KIND_LABELS } from '../../types'
-import { formatHmFromSeconds, isValidTimeInput, parseTimeToSeconds } from '../../lib/time'
+import { formatHmFromSeconds, isValidTimeInput, parseTimeToSeconds, withParticle } from '../../lib/time'
 
 interface TimetableEditorProps {
   timetables: Record<string, DayTimetable>
@@ -88,7 +88,7 @@ export function TimetableEditor({
 
     for (let index = 1; index < sorted.length; index += 1) {
       if (parseTimeToSeconds(sorted[index].start) < parseTimeToSeconds(sorted[index - 1].end)) {
-        return `${sorted[index - 1].label}와(과) ${sorted[index].label}의 시간이 겹칩니다.`
+        return `${withParticle(sorted[index - 1].label, '과', '와')} ${sorted[index].label}의 시간이 겹칩니다.`
       }
     }
     return null

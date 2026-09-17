@@ -275,3 +275,89 @@ export function secondsUntilDateKey(reference: KstTimeParts, dateKey: string) {
   }
   return Math.round((target - reference.epochMs) / 1000)
 }
+
+/* ------------------------------------------------------------------ *
+ * Korean particle helpers (조사)
+ *
+ * Korean picks a particle based on whether the preceding syllable ends in a
+ * consonant (받침). Interpolating a user- or calendar-supplied noun straight
+ * into a sentence therefore produces things like "추석로 쉬는 날" instead of
+ * "추석으로". These helpers pick the right form so the copy reads naturally
+ * whatever the teacher typed.
+ * ------------------------------------------------------------------ */
+
+const HANGUL_BASE = 0xac00
+const HANGUL_LAST = 0xd7a3
+/** Jongseong (받침) index of ㄹ inside a composed Hangul syllable. */
+const RIEUL_JONGSEONG = 8
+/** Digits whose Korean pronunciation ends in a consonant: 1,3,6,7,8,0. */
+const DIGITS_WITH_BATCHIM = new Set(['1', '3', '6', '7', '8', '0'])
+/** Digits pronounced with a final ㄹ: 1 (일), 7 (칠), 8 (팔). */
+const DIGITS_ENDING_IN_RIEUL = new Set(['1', '7', '8'])
+
+/**
+ * Does the last character of `word` end in a 받침 (final consonant)?
+ * Returns `null` when the ending cannot be determined (e.g. latin letters),
+ * which lets callers fall back to a neutral phrasing.
+ */
+export function endsWithConsonant(word: string): boolean | null {
+  const trimmed = word.trim()
+  if (!trimmed) {
+    return null
+  }
+  const code = trimmed.charCodeAt(trimmed.length - 1)
+
+  if (code >= HANGUL_BASE && code <= HANGUL_LAST) {
+    // 받침 index 0 means the syllable ends in a vowel.
+    return (code - HANGUL_BASE) % 28 !== 0
+  }
+  const lastChar = trimmed[trimmed.length - 1]
+  if (lastChar >= '0' && lastChar <= '9') {
+    return DIGITS_WITH_BATCHIM.has(lastChar)
+  }
+  return null
+}
+
+/** Does the last character end in a ㄹ 받침? (`null` when undeterminable.) */
+function endsWithRieul(word: string): boolean | null {
+  const trimmed = word.trim()
+  if (!trimmed) {
+    return null
+  }
+  const code = trimmed.charCodeAt(trimmed.length - 1)
+  if (code >= HANGUL_BASE && code <= HANGUL_LAST) {
+    return (code - HANGUL_BASE) % 28 === RIEUL_JONGSEONG
+  }
+  const lastChar = trimmed[trimmed.length - 1]
+  if (lastChar >= '0' && lastChar <= '9') {
+    return DIGITS_ENDING_IN_RIEUL.has(lastChar)
+  }
+  return null
+}
+
+/**
+ * Append the correct particle to `word`.
+ *
+ * `withParticle('추석', '으로', '로')` → `'추석으로'`
+ * `withParticle('설날', '으로', '로')` → `'설날로'`  (ㄹ 예외)
+ * `withParticle('국어', '과', '와')` → `'국어와'`
+ *
+ * The 으로/로 pair carries a well-known exception: a word ending in ㄹ takes
+ * the *vowel* form (설날로, 개교기념일로), unlike every other consonant. Other
+ * particle pairs (은/는, 이/가, 을/를, 과/와) follow the plain 받침 rule.
+ *
+ * When the ending cannot be determined — latin letters, symbols — both forms
+ * are shown (`과(와)` style), which is the conventional Korean fallback.
+ */
+export function withParticle(word: string, afterConsonant: string, afterVowel: string) {
+  const trimmed = word.trim()
+  const hasBatchim = endsWithConsonant(trimmed)
+  if (hasBatchim === null) {
+    return `${trimmed}${afterConsonant}(${afterVowel})`
+  }
+  // ㄹ + 으로 → 로.
+  if (hasBatchim && afterVowel === '로' && endsWithRieul(trimmed) === true) {
+    return `${trimmed}${afterVowel}`
+  }
+  return `${trimmed}${hasBatchim ? afterConsonant : afterVowel}`
+}

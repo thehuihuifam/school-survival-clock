@@ -30,8 +30,8 @@ export function CelebrationToast({
     <div className="celebration-toast" role="status" aria-live="assertive" style={timerStyle}>
       <div className="celebration-icon" aria-hidden="true"><SolarIcon name="confetti-bold" size={23} /></div>
       <div className="celebration-copy">
-        <p className="celebration-kicker">MISSION COMPLETE · {dismissalTime}</p>
-        <strong>오늘도 아이들과 함께 무사히 생존하셨습니다. 칼퇴하세요!</strong>
+        <p className="celebration-kicker">{dismissalTime} 하교</p>
+        <strong>오늘도 무사히 생존하셨습니다. 칼퇴하세요!</strong>
         <span>
           {totalClassCount > 0
             ? `${totalClassCount}교시 · ${formatMinutes(totalClassSeconds)}의 수업을 모두 마쳤습니다`

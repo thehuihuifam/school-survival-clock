@@ -46,8 +46,8 @@ export function BatteryCard({ metrics, isTodaySchoolDay }: BatteryCardProps) {
         <div className="battery-title">
           <div className="battery-icon"><SolarIcon name="battery-charge-bold" size={16} /></div>
           <div>
-            <p className="eyebrow">SEMESTER SURVIVAL</p>
             <h2>방학 D-Day 게이지</h2>
+            <p className="card-subtitle">수업일 기준으로 학기 진행률을 계산해요</p>
           </div>
         </div>
         <div className="battery-status" title={tone.label}>

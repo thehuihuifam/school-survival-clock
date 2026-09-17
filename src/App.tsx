@@ -5,6 +5,7 @@ import { CelebrationToast } from './components/CelebrationToast'
 import { ClockHero } from './components/ClockHero'
 import { PeriodTracker } from './components/PeriodTracker'
 import { SettingsModal } from './components/SettingsModal'
+import { WeekOverview } from './components/WeekOverview'
 import { SolarIcon } from './components/Icon'
 import { detectPreAlert, detectScheduleEvent, dispatchPreAlert, dispatchScheduleEvent } from './lib/alerts'
 import { documentTitleFor, greetingForHour } from './lib/copy'
@@ -19,7 +20,7 @@ import { useResolvedTheme } from './lib/theme'
 import { getKstTimeParts, secondsUntilDateKey } from './lib/time'
 import { getUpcomingEvents } from './lib/timeline'
 import { useNow } from './lib/useNow'
-import { useRevealOnScroll } from './lib/reveal'
+import { requestNotificationPermission } from './lib/notify'
 import type { DayOverride, NextSchoolDay, ThemeMode, UserSettings } from './types'
 
 const CONFETTI_COLORS = ['#34d399', '#6ee7b7', '#a7f3d0', '#d1fae5', '#10b981']
@@ -31,7 +32,7 @@ const footerRevealStyle = { '--index': 2 } as CSSProperties
 
 function App() {
   const [settings, setSettings] = useState<UserSettings>(loadSettings)
-  const { now } = useNow()
+  const now = useNow()
   const resolvedTheme = useResolvedTheme(settings.themeMode)
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
@@ -47,8 +48,6 @@ function App() {
     initialized: false,
     lastKey: null,
   })
-
-  useRevealOnScroll()
 
   const kstNow = useMemo(() => getKstTimeParts(now), [now])
   const status = useMemo(() => getScheduleStatus(kstNow, settings), [kstNow, settings])
@@ -86,6 +85,7 @@ function App() {
   useEffect(() => {
     saveSettings(settings)
     chimeEngine.setEnabled(settings.soundEnabled)
+    chimeEngine.setVolume(settings.soundVolume / 100)
   }, [settings])
 
   useEffect(() => {
@@ -215,6 +215,48 @@ function App() {
     chimeEngine.play('ui')
   }, [])
 
+  /** M · 차임벨 켜기/끄기. 끌 때는 소리를 내지 않는다. */
+  const handleToggleSound = useCallback(() => {
+    setSettings((current) => {
+      const soundEnabled = !current.soundEnabled
+      chimeEngine.setEnabled(soundEnabled)
+      if (soundEnabled) {
+        chimeEngine.unlock()
+        chimeEngine.play('ui')
+      }
+      return { ...current, soundEnabled }
+    })
+  }, [])
+
+  /** N · 브라우저 알림 켜기/끄기. 켤 때만 권한을 요청한다. */
+  const handleToggleNotify = useCallback(() => {
+    setSettings((current) => {
+      if (current.notifyEnabled) {
+        return { ...current, notifyEnabled: false }
+      }
+      void requestNotificationPermission().then((state) => {
+        setNotificationState(state)
+        if (state !== 'granted') {
+          setSettings((latest) => ({ ...latest, notifyEnabled: false }))
+        }
+      })
+      return { ...current, notifyEnabled: true }
+    })
+    chimeEngine.play('ui')
+  }, [])
+
+  /** F · 전체 화면(교실 TV에 띄워 둘 때). */
+  const handleToggleFullscreen = useCallback(() => {
+    const element = document.documentElement
+    if (document.fullscreenElement) {
+      void document.exitFullscreen().catch(() => {})
+      return
+    }
+    if (typeof element.requestFullscreen === 'function') {
+      void element.requestFullscreen().catch(() => {})
+    }
+  }, [])
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.metaKey || event.ctrlKey || event.altKey || event.key.length !== 1) return
@@ -230,19 +272,31 @@ function App() {
           event.preventDefault()
           handleCycleTheme()
           break
+        case 'f':
+          event.preventDefault()
+          handleToggleFullscreen()
+          break
+        case 'm':
+          event.preventDefault()
+          handleToggleSound()
+          break
+        case 'n':
+          event.preventDefault()
+          handleToggleNotify()
+          break
         default:
           break
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [handleCycleTheme, isSettingsOpen])
-
-  const introKicker = status.phase === 'off-day'
-    ? 'RECOVERY DAY · NO BELL TODAY'
-    : status.phase === 'dismissed'
-      ? 'DAY COMPLETE · REST WELL'
-      : 'A LITTLE POWER FOR A BIG DAY'
+  }, [
+    handleCycleTheme,
+    handleToggleFullscreen,
+    handleToggleNotify,
+    handleToggleSound,
+    isSettingsOpen,
+  ])
 
   return (
     <div className={`app-shell theme-${resolvedTheme}`}>
@@ -261,27 +315,17 @@ function App() {
         <main id="main-content">
           <section className="dashboard-intro reveal" style={introRevealStyle}>
             <div className="intro-copy">
-              <p className="intro-kicker">{introKicker}</p>
               <h2>{greetingForHour(kstNow.hour)}, {settings.displayName || '선생님'}.</h2>
-              <p className="intro-sub">{status.day.description}</p>
             </div>
-            <div className="intro-side">
-              <p className="intro-side-note">
-                <SolarIcon name="hand-heart-bold" size={14} />
-                <span>
-                  {status.phase === 'off-day'
-                    ? '오늘은 교실 대신 나를 돌보는 날'
-                    : status.phase === 'dismissed'
-                      ? '오늘의 미션은 모두 끝났습니다'
-                      : '실시간으로 응원하는 중'}
-                </span>
-              </p>
-              {installPrompt && (
-                <button type="button" className="ghost-button is-small" onClick={() => void installPrompt().then(() => setInstallPrompt(null))}>
-                  <SolarIcon name="download-square-bold" size={13} /> 앱 설치
-                </button>
-              )}
-            </div>
+            {installPrompt && (
+              <button
+                type="button"
+                className="ghost-button is-small"
+                onClick={() => void installPrompt().then(() => setInstallPrompt(null))}
+              >
+                <SolarIcon name="download-square-bold" size={13} /> 앱 설치
+              </button>
+            )}
           </section>
 
           <section className="hero-grid" aria-label="현재 시각과 학기 진행률">
@@ -299,11 +343,13 @@ function App() {
           </section>
 
           <PeriodTracker now={kstNow} status={status} upcoming={upcoming} preAlertSeconds={preAlertSeconds} />
+
+          <WeekOverview now={kstNow} settings={settings} />
         </main>
 
         <footer className="app-footer reveal" style={footerRevealStyle}>
           <span>교사 생존 시계 <b>·</b> {kstNow.year} <b>·</b> Asia/Seoul</span>
-          <span>단축키 S 설정 · T 테마 · 클릭으로 카운트다운 전환</span>
+          <span>단축키 S 설정 · T 화면 모드 · F 전체 화면 · M 소리 · N 알림</span>
         </footer>
       </div>
 

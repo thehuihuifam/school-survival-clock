@@ -137,11 +137,25 @@ class ChimeEngine {
     }
   }
 
+  /** 0..1 사이의 마스터 음량. 설정 슬라이더(0–100)에서 변환해 넘긴다. */
   setVolume(volume: number) {
     this.volume = Math.min(1, Math.max(0, volume))
     if (this.master) {
       this.master.gain.value = this.volume
     }
+  }
+
+  /**
+   * 설정에서 "소리 미리 듣기"를 누를 때처럼, 켜짐 여부와 상관없이 한 번 울린다.
+   * 사용자의 클릭에서 호출되므로 컨텍스트 잠금도 함께 풀어 준다.
+   */
+  preview(kind: ChimeKind) {
+    this.unlock()
+    const wasEnabled = this.enabled
+    this.enabled = true
+    const played = this.play(kind)
+    this.enabled = wasEnabled
+    return played
   }
 
   get isEnabled() {

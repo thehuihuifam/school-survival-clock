@@ -25,6 +25,9 @@ const SLOT_ICONS: Record<SlotKind, SolarIconName> = {
 
 const STATE_LABEL = { done: '완료', active: '진행 중', upcoming: '예정' } as const
 
+/** 사이드 레일에 보여 줄 다음 일정 개수. */
+const NEXT_UP_LIMIT = 3
+
 function slotHeadline(status: ScheduleStatus) {
   const { phase, activeSlot, nextSlot, day } = status
   if (phase === 'off-day') return { title: day.label, detail: day.description }
@@ -58,7 +61,7 @@ export function PeriodTracker({ now, status, upcoming, preAlertSeconds }: Period
   const isEmpty = layout.items.length === 0
   const isOffDay = status.phase === 'off-day'
 
-  // Filter upcoming to exclude break kind (auto-generated) and deduplicate same label within 10min
+  // 자동 생성된 쉬는 시간은 빼고, 같은 라벨+시간대가 중복으로 들어오는 것도 막는다.
   const filteredUpcoming = useMemo(() => {
     const seen = new Set<string>()
     const result: UpcomingEvent[] = []
@@ -68,7 +71,7 @@ export function PeriodTracker({ now, status, upcoming, preAlertSeconds }: Period
       if (seen.has(key)) continue
       seen.add(key)
       result.push(ev)
-      if (result.length >= 3) break
+      if (result.length >= NEXT_UP_LIMIT) break
     }
     return result
   }, [upcoming])
@@ -77,9 +80,10 @@ export function PeriodTracker({ now, status, upcoming, preAlertSeconds }: Period
     <section className="surface-card period-card reveal reveal-on-scroll" style={revealStyle}>
       <div className="period-header">
         <div className="period-heading">
-          <p className="eyebrow"><span className="eyebrow-dot soft" aria-hidden="true" /> CLASSROOM RADAR</p>
-          <h2>오늘의 시간표 레이더</h2>
-          <p className="card-subtitle">KST 기준 · 설정한 시간표로 계산됩니다</p>
+          <h2>오늘의 시간표</h2>
+          <p className="card-subtitle">
+            마지막 교시 뒤부터 하교까지는 방과후·업무로 표시돼요. 설정에서 요일별로 편집할 수 있어요.
+          </p>
         </div>
         <div className={`period-now-badge ${status.isBreak ? 'is-break' : ''} ${status.phase === 'dismissed' ? 'is-done' : ''}`}>
           <span className="period-now-pulse" aria-hidden="true" />
@@ -107,7 +111,7 @@ export function PeriodTracker({ now, status, upcoming, preAlertSeconds }: Period
               <p className="period-note-detail">{headline.detail}</p>
             </div>
             <div className="period-clock-mini" aria-hidden="true">
-              <span>NOW</span>{formatHmFromSeconds(now.daySeconds)}
+              {formatHmFromSeconds(now.daySeconds)}
             </div>
           </div>
 
@@ -138,7 +142,7 @@ export function PeriodTracker({ now, status, upcoming, preAlertSeconds }: Period
                       {!item.isCompact && <span className="timeline-slot-label">{item.slot.label}</span>}
                     </span>
                     {!item.isCompact && <span className="timeline-time">{item.slot.timeLabel}</span>}
-                    {item.state === 'active' && <span className="active-pill">NOW</span>}
+                    {item.state === 'active' && <span className="active-pill">지금</span>}
                   </div>
                 ))}
                 {layout.needlePercent !== null && (
@@ -170,7 +174,10 @@ export function PeriodTracker({ now, status, upcoming, preAlertSeconds }: Period
         </div>
 
         <aside className="next-up-rail" aria-label="다음 일정">
-          <p className="rail-title"><SolarIcon name="hourglass-bold" size={13} /> NEXT UP · 3개</p>
+          <p className="rail-title">
+            <SolarIcon name="hourglass-bold" size={13} /> 다음 일정
+            {filteredUpcoming.length > 0 && <span className="rail-count">{filteredUpcoming.length}</span>}
+          </p>
           {filteredUpcoming.length === 0 ? (
             <p className="rail-empty">다음 일정이 없습니다. 설정에서 시간표를 확인하세요.</p>
           ) : (
@@ -191,17 +198,8 @@ export function PeriodTracker({ now, status, upcoming, preAlertSeconds }: Period
               })}
             </ol>
           )}
-          <p className="rail-note">
-            <SolarIcon name="info-circle-linear" size={12} />
-            쉬는 시간은 자동 생성되며, NEXT UP에는 수업·점심·재량만 표시됩니다.
-          </p>
         </aside>
       </div>
-
-      <p className="period-legend">
-        <SolarIcon name="info-circle-linear" size={13} />
-        마지막 교시 이후부터 퇴근 시각까지는 방과후·업무 블록으로 표시됩니다. 시간표는 설정에서 요일별로 편집할 수 있습니다.
-      </p>
     </section>
   )
 }

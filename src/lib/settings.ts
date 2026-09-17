@@ -36,9 +36,10 @@ import {
   parseDateInput,
 } from './time'
 
-export const STORAGE_KEY = 'school-survival-clock.settings.v3'
+export const STORAGE_KEY = 'school-survival-clock.settings.v4'
 /** Keys used by earlier builds; read once so returning users keep their data. */
 const LEGACY_STORAGE_KEYS = [
+  'school-survival-clock.settings.v3',
   'school-survival-clock.settings.v2',
   'teacher-survival-dashboard-settings',
   'school-survival-clock.settings.v1',
@@ -78,6 +79,14 @@ function asPreAlertMinutes(value: unknown): number {
     return BASE_SETTINGS.preAlertMinutes
   }
   return Math.min(MAX_PRE_ALERT_MINUTES, Math.max(MIN_PRE_ALERT_MINUTES, Math.round(minutes)))
+}
+
+function asVolume(value: unknown): number {
+  const volume = Number(value)
+  if (!Number.isFinite(volume)) {
+    return BASE_SETTINGS.soundVolume
+  }
+  return Math.min(100, Math.max(0, Math.round(volume)))
 }
 
 function asTime(value: unknown, fallback: string) {
@@ -302,9 +311,11 @@ export function normalizeSettings(
     semesterAuto,
     themeMode,
     soundEnabled: asBoolean(source.soundEnabled, BASE_SETTINGS.soundEnabled),
+    soundVolume: asVolume(source.soundVolume),
     notifyEnabled: asBoolean(source.notifyEnabled, BASE_SETTINGS.notifyEnabled),
     preAlertEnabled: asBoolean(source.preAlertEnabled, BASE_SETTINGS.preAlertEnabled),
     preAlertMinutes: asPreAlertMinutes(source.preAlertMinutes),
+    autoHolidays: asBoolean(source.autoHolidays, BASE_SETTINGS.autoHolidays),
     schoolDays: normaliseSchoolDays(source.schoolDays),
     holidays: normaliseHolidays(source.holidays),
     dayOverrides: normaliseDayOverrides(source.dayOverrides, todayDateKey),

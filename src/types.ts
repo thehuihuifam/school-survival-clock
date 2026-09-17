@@ -77,11 +77,18 @@ export interface UserSettings {
   semesterAuto: boolean
   themeMode: ThemeMode
   soundEnabled: boolean
+  /** 차임벨 음량 (0–100). */
+  soundVolume: number
   notifyEnabled: boolean
   /** 예비종: warn this many minutes before a class starts. */
   preAlertEnabled: boolean
   /** Minutes before the bell (1–15). */
   preAlertMinutes: number
+  /**
+   * `true`면 내장 공휴일 달력(`src/lib/holidays.ts`)이 자동으로 적용된다.
+   * 직접 등록한 휴일과 합쳐지며, 같은 날짜는 직접 등록한 쪽이 우선한다.
+   */
+  autoHolidays: boolean
   /** Weekday indices that count as school days (0 = Sunday … 6 = Saturday). */
   schoolDays: number[]
   holidays: Holiday[]
@@ -346,7 +353,7 @@ export const TIMETABLE_PRESETS: TimetablePreset[] = [
   },
 ]
 
-export const SETTINGS_VERSION = 3
+export const SETTINGS_VERSION = 4
 
 /** 예비종 fires this many minutes before a class by default. */
 const DEFAULT_PRE_ALERT_MINUTES = 3
@@ -354,6 +361,9 @@ const DEFAULT_PRE_ALERT_MINUTES = 3
 export const PRE_ALERT_MINUTE_OPTIONS = [1, 3, 5, 10]
 export const MIN_PRE_ALERT_MINUTES = 1
 export const MAX_PRE_ALERT_MINUTES = 15
+
+/** 차임벨 기본 음량 (0–100). */
+export const DEFAULT_SOUND_VOLUME = 60
 
 /**
  * The semester window that older builds shipped as their *defaults*. Payloads
@@ -398,9 +408,11 @@ export const BASE_SETTINGS: StaticSettings = {
   dismissalTime: '16:30',
   themeMode: 'dark',
   soundEnabled: true,
+  soundVolume: DEFAULT_SOUND_VOLUME,
   notifyEnabled: false,
   preAlertEnabled: true,
   preAlertMinutes: DEFAULT_PRE_ALERT_MINUTES,
+  autoHolidays: true,
   schoolDays: [...DEFAULT_SCHOOL_DAYS],
   holidays: [],
   dayOverrides: {},
