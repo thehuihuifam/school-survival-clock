@@ -92,7 +92,7 @@ export function PeriodTracker({ now, status, upcoming, preAlertSeconds }: Period
             {status.phase === 'off-day' ? '재충전'
               : status.phase === 'dismissed' ? '수고하셨어요'
               : status.phase === 'before-first-slot' ? `${formatHumanDuration(status.secondsRemaining, 1)} 남음`
-                : `${Math.round(status.dayProgress)}% 진행`}
+                : `${Math.round(status.dayProgress)}%`}
           </strong>
         </div>
       </div>

@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { formatFullKstDate, formatKstDate, formatMinutes, pad, formatPercent } from '../lib/time'
-import { DAY_TYPE_TONES, greetingForHour, heroHeadline } from '../lib/copy'
+import { DAY_TYPE_TONES, heroHeadline } from '../lib/copy'
 import { DayOverrideBar } from './DayOverrideBar'
 import { SolarIcon } from './Icon'
 import type { DayOverride, KstTimeParts, NextSchoolDay, ScheduleStatus } from '../types'
 
 interface ClockHeroProps {
   now: KstTimeParts
-  displayName: string
   status: ScheduleStatus
   nextSchoolDay: NextSchoolDay | null
   preAlertSeconds: number
@@ -17,13 +16,6 @@ interface ClockHeroProps {
 }
 
 const revealStyle = { '--index': 1 } as CSSProperties
-
-function avatarInitial(displayName: string) {
-  const trimmed = displayName.trim()
-  if (!trimmed) return '쌤'
-  const first = [...trimmed][0]
-  return /[가-힣]/.test(first) ? first : first.toUpperCase()
-}
 
 function hms(totalSeconds: number) {
   const safe = Math.max(0, totalSeconds)
@@ -40,7 +32,6 @@ const FOCUS_ORDER: FocusMode[] = ['auto', 'slot', 'dismissal']
 
 export function ClockHero({
   now,
-  displayName,
   status,
   nextSchoolDay,
   preAlertSeconds,
@@ -195,22 +186,6 @@ export function ClockHero({
             {focused ? `${formatPercent(focused.bar, 0)}%` : headline.barLabel}
           </span>
         </div>
-      </div>
-
-      <div className="clock-footer">
-        <div className="teacher-greeting">
-          <div className="avatar-chip" aria-hidden="true">{avatarInitial(displayName)}</div>
-          <div className="teacher-greeting-copy">
-            <strong>{displayName || '오늘도 빛나는 선생님'}</strong>
-            <span>{greetingForHour(now.hour)}</span>
-          </div>
-        </div>
-        {!isOff && (
-          <p className="tiny-status">
-            <SolarIcon name="notebook-bold" size={13} />
-            남은 수업 {status.remainingClassCount}교시 · {formatMinutes(status.remainingClassSeconds)}
-          </p>
-        )}
       </div>
 
       <DayOverrideBar

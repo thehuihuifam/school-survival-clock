@@ -221,6 +221,26 @@ describe('App render', () => {
     expect(html).not.toContain('1교시 진행 중')
   })
 
+  it('never prints the same sentence twice on one screen', () => {
+    const html = renderAt('2026-09-17T01:50:00Z') // 목요일 10:50 KST, 3교시
+    const text = html.replace(/<[^>]*>/g, ' ')
+
+    // 인사말은 인트로에서 한 번만. (예전에는 히어로 카드 하단에도 찍혔다.)
+    const greeting = '오전 수업 화이팅이에요'
+    expect(text.split(greeting).length - 1).toBe(1)
+
+    // 교사 이름도 한 번만.
+    expect(text.split('김선생님').length - 1).toBe(1)
+
+    // '남은 수업 2시간'은 카운트다운에서 한 번만.
+    // (주간 카드의 '남은 수업일 N일'은 다른 문구라 세지 않는다.)
+    expect((text.match(/남은 수업 \d/g) ?? []).length).toBe(1)
+    expect((text.match(/남은 수업일 \d/g) ?? []).length).toBe(1)
+
+    // 하교 시각은 카드 부제와 타임라인 눈금에만 (히어로 칩에서 제거됨).
+    expect(text.split('하교 16:30').length - 1).toBeLessThanOrEqual(1)
+  })
+
   it('keeps the documented keyboard shortcuts in the footer', () => {
     const html = renderAt('2026-09-17T00:10:00Z')
 

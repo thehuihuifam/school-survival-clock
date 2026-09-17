@@ -331,7 +331,6 @@ function App() {
           <section className="hero-grid" aria-label="현재 시각과 학기 진행률">
             <ClockHero
               now={kstNow}
-              displayName={settings.displayName}
               status={status}
               nextSchoolDay={nextSchoolDay}
               preAlertSeconds={preAlertSeconds}
