@@ -113,7 +113,8 @@ function slotKicker(slot: TimelineSlot) {
     case 'club':
       return '재량 · 동아리'
     default:
-      return slot.classIndex === null ? '수업 중' : `${slot.classIndex}교시 수업 중`
+      // 교시 번호는 아래 title이 이미 말한다. 여기서 또 세면 같은 말이 세 번 반복된다.
+      return '수업 중'
   }
 }
 
@@ -204,8 +205,11 @@ export function heroHeadline(
 
     return {
       kicker: slotKicker(activeSlot),
-      title: activeSlot.label,
-      helper: `${activeSlot.timeLabel} · ${formatPercent(status.slotProgress, 0)}% 지남`,
+      // 상태 이름 · 블록 이름 · 시각을 한 줄로 합친다(예: `6교시 수업 · 14:10 ~ 14:50`).
+      title: activeSlot.kind === 'class' && activeSlot.classIndex !== null
+        ? `${activeSlot.label} 수업 · ${activeSlot.timeLabel}`
+        : `${activeSlot.label} · ${activeSlot.timeLabel}`,
+      helper: '',
       value: formatDuration(status.secondsRemaining),
       valueNote:
         isBreak || isLunch

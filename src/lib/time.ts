@@ -75,13 +75,8 @@ export function currentKstDateKey(date: Date = new Date()) {
  * Formatting
  * ------------------------------------------------------------------ */
 
-export function formatKstDate(parts: KstTimeParts) {
-  return `${String(parts.year).slice(-2)}.${pad(parts.month)}.${pad(parts.day)} ${parts.weekday}`
-}
-
 /**
- * Long date without the weekday: `formatKstDate` right next to it already ends
- * with `목요일`, and printing it twice read as a glitch.
+ * Long date without the weekday. 요일은 히어로에서 바로 뒤에 붙여 한 줄로 읽는다.
  */
 export function formatFullKstDate(parts: KstTimeParts) {
   return `${parts.year}년 ${parts.month}월 ${parts.day}일`

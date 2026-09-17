@@ -9,8 +9,6 @@ interface WeekOverviewProps {
   settings: UserSettings
 }
 
-const revealStyle = { '--index': 1 } as CSSProperties
-
 const STATE_ICON: Record<WeekDayState, SolarIconName> = {
   school: 'notebook-bold',
   today: 'notebook-bold',
@@ -44,7 +42,7 @@ export function WeekOverview({ now, settings }: WeekOverviewProps) {
         : `남은 수업일 ${overview.remainingSchoolDayCount}일 · 주간 수업 ${formatMinutes(overview.totalClassSeconds)}`
 
   return (
-    <section className="surface-card week-card reveal reveal-on-scroll" style={revealStyle} aria-label="이번 주 한눈에 보기">
+    <section className="surface-card week-card reveal" aria-label="이번 주 한눈에 보기">
       <div className="card-heading-row">
         <div>
           <h2>이번 주</h2>

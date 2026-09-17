@@ -50,7 +50,7 @@ export interface WeekOverview {
   days: WeekDaySummary[]
   /** 이번 주 수업이 있는 날 수. */
   schoolDayCount: number
-  /** 이번 주 남은 수업일 수(오늘 포함, 오늘이 수업일이고 아직 안 끝났으면 1). */
+  /** 이번 주 남은 수업일 수(오늘은 하교 시각 전까지만 포함한다). */
   remainingSchoolDayCount: number
   /** 이번 주 수업 시간 합계(초). */
   totalClassSeconds: number
@@ -112,11 +112,14 @@ export function getWeekOverview(now: KstTimeParts, settings: UserSettings): Week
     const isTeachingDay = state === 'school' || state === 'today'
     const classCount = isTeachingDay ? outline.classSlots.length : 0
     const classSeconds = isTeachingDay ? outline.totalClassSeconds : 0
+    // 오늘이 하교 시각을 지났다면 남은 수업일이 아니다.
+    // (그러지 않으면 목요일 밤에 '남은 수업일 2일'이 찍혀 하루를 더 세게 된다.)
+    const isTodayFinished = isToday && now.daySeconds >= outline.dismissalSeconds
 
     if (isTeachingDay) {
       schoolDayCount += 1
       totalClassSeconds += classSeconds
-      if (!isPast) {
+      if (!isPast && !isTodayFinished) {
         remainingSchoolDayCount += 1
       }
       if (classSeconds > heaviestSeconds) {

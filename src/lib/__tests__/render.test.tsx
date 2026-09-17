@@ -162,7 +162,9 @@ describe('App render', () => {
 
     expect(html).toContain('하루 완료')
     expect(html).toContain('23:59')
-    expect(html).toContain('26.09.17 목요일')
+    // 날짜는 긴 형식 + 요일 한 줄로만 찍힌다(짧은 형식과 겹쳐 쓰지 않는다).
+    expect(html).toContain('2026년 9월 17일 목요일')
+    expect(html).not.toContain('26.09.17')
     // The shared HH:MM formatter renders the dismissal label here.
     expect(html).toContain('16:30 하교 · 수고하셨어요')
   })
@@ -171,10 +173,9 @@ describe('App render', () => {
     const html = renderAt('2026-09-17T15:00:00Z') // 금요일 00:00 KST
 
     // Date, weekday, D-Day counter and battery position all advance together.
-    expect(html).toContain('26.09.18 금요일')
-    expect(html).toContain('2026년 9월 18일')
+    expect(html).toContain('2026년 9월 18일 금요일')
     expect(html).toContain('D-110')
-    expect(html).not.toContain('26.09.17')
+    expect(html).not.toContain('9월 17일')
     // The new day starts in the pre-bell state, not still dismissed.
     expect(html).toContain('등교 전')
     expect(html).toContain('1교시까지')
@@ -239,6 +240,34 @@ describe('App render', () => {
 
     // 하교 시각은 카드 부제와 타임라인 눈금에만 (히어로 칩에서 제거됨).
     expect(text.split('하교 16:30').length - 1).toBeLessThanOrEqual(1)
+  })
+
+  it('collapses the countdown copy into one line per block', () => {
+    const html = renderAt('2026-09-17T05:10:00Z') // 목요일 14:10 KST, 6교시
+    const text = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ')
+
+    // 상태 이름은 교시 번호를 반복하지 않는다.
+    expect(text).not.toContain('6교시 수업 중')
+    // 블록 이름·시각은 한 줄로 합쳐진다.
+    expect(text).toContain('6교시 수업 · 14:10 ~ 14:50')
+    // '% 지남' 같은 중복 지표는 카운트다운 문구에서 사라졌다.
+    expect(text).not.toContain('% 지남')
+  })
+
+  it('drops the weekday-timetable explainer from the timetable card', () => {
+    const html = renderAt('2026-09-17T00:10:00Z')
+
+    expect(html).not.toContain('마지막 교시 뒤부터 하교까지는')
+  })
+
+  it('labels the dismissal time with the shortened time on a 단축 day', () => {
+    const html = renderWithStoredSettings('2026-09-17T04:00:00Z', { // 목요일 13:00 KST, 단축 하교 시각
+      dayOverride: { kind: 'short', label: '단축 수업', dismissalTime: '13:00' },
+    })
+
+    // 설정 원본(16:30)이 아니라 오늘 실제 하교 시각(13:00)이 찍혀야 한다.
+    expect(html).toContain('13:00 하교')
+    expect(html).not.toContain('16:30 하교')
   })
 
   it('keeps the documented keyboard shortcuts in the footer', () => {

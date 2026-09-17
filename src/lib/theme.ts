@@ -4,8 +4,8 @@ import type { ResolvedTheme, ThemeMode } from '../types'
 /** Keep in sync with the inline bootstrap in `index.html`. */
 const THEME_ATTRIBUTE = 'data-theme'
 const THEME_COLOR_BY_THEME: Record<ResolvedTheme, string> = {
-  dark: '#09090b',
-  light: '#f6f7f5',
+  dark: '#000000',
+  light: '#ffffff',
 }
 
 function prefersDarkColorScheme() {
