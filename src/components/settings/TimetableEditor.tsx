@@ -279,7 +279,7 @@ export function TimetableEditor({
                 />
               </Field>
 
-              <Field id={`${period.id}-kind`} label="구분" className="period-field-kind">
+              <Field id={`${period.id}-kind`} label="구분">
                 <select
                   id={`${period.id}-kind`}
                   value={period.kind}

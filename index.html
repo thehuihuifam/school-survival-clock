@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#09090b" />
+    <meta name="theme-color" content="#000000" />
     <meta name="color-scheme" content="dark light" />
     <meta
       name="description"
@@ -37,27 +37,31 @@
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
     <link rel="manifest" href="./manifest.webmanifest" />
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.min.css"
     />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400;500&display=swap"
-    />
 
     <script>
       // Paint-time theme bootstrap: resolve the stored theme *before* the first
-      // frame so dark-mode users never see a white flash while React boots.
+      // frame so the first paint already matches the teacher's choice.
+      // Keys are listed newest-first; the current v4 key must stay at the top,
+      // otherwise every migrated profile repaints in the wrong theme.
       ;(function () {
         try {
-          var raw =
-            localStorage.getItem('school-survival-clock.settings.v3') ||
-            localStorage.getItem('school-survival-clock.settings.v2') ||
-            localStorage.getItem('teacher-survival-dashboard-settings')
+          var KEYS = [
+            'school-survival-clock.settings.v4',
+            'school-survival-clock.settings.v3',
+            'school-survival-clock.settings.v2',
+            'school-survival-clock.settings.v1',
+            'teacher-survival-dashboard-settings',
+          ]
+          var raw = null
+          for (var index = 0; index < KEYS.length; index += 1) {
+            raw = localStorage.getItem(KEYS[index])
+            if (raw) break
+          }
           var mode = 'dark'
           if (raw) {
             var parsed = JSON.parse(raw)
@@ -80,7 +84,7 @@
           root.style.colorScheme = resolved
           var meta = document.querySelector('meta[name="theme-color"]')
           if (meta) {
-            meta.setAttribute('content', resolved === 'light' ? '#f6f7f5' : '#09090b')
+            meta.setAttribute('content', resolved === 'light' ? '#ffffff' : '#000000')
           }
         } catch (error) {
           // Blocked storage or an unexpected payload: the app defaults to dark.

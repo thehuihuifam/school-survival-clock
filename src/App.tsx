@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AppHeader } from './components/AppHeader'
 import { BatteryCard } from './components/BatteryCard'
 import { CelebrationToast } from './components/CelebrationToast'
@@ -9,9 +9,8 @@ import { WeekOverview } from './components/WeekOverview'
 import { SolarIcon } from './components/Icon'
 import { detectPreAlert, detectScheduleEvent, dispatchPreAlert, dispatchScheduleEvent } from './lib/alerts'
 import { documentTitleFor, greetingForHour } from './lib/copy'
-import { getNotificationState } from './lib/notify'
 import { subscribeInstallPrompt, type InstallPrompt } from './lib/pwa'
-import { getNextSchoolDay, getScheduleStatus } from './lib/schedule'
+import { dismissalTimeFor, getNextSchoolDay, getScheduleStatus } from './lib/schedule'
 import { getSemesterMetrics } from './lib/semester'
 import { getAutoSemesterWindow } from './lib/semesterWindow'
 import { loadSettings, normalizeSettings, saveSettings, subscribeToExternalSettings } from './lib/settings'
@@ -20,15 +19,12 @@ import { useResolvedTheme } from './lib/theme'
 import { getKstTimeParts, secondsUntilDateKey } from './lib/time'
 import { getUpcomingEvents } from './lib/timeline'
 import { useNow } from './lib/useNow'
-import { requestNotificationPermission } from './lib/notify'
+import { getNotificationState, requestNotificationPermission } from './lib/notify'
 import type { DayOverride, NextSchoolDay, ThemeMode, UserSettings } from './types'
 
-const CONFETTI_COLORS = ['#34d399', '#6ee7b7', '#a7f3d0', '#d1fae5', '#10b981']
+const CONFETTI_COLORS = ['#2997ff', '#0066cc', '#64d2ff', '#a8d8ff', '#ffffff']
 const CELEBRATION_MS = 12000
 const THEME_CYCLE: ThemeMode[] = ['dark', 'light', 'system']
-
-const introRevealStyle = { '--index': 0 } as CSSProperties
-const footerRevealStyle = { '--index': 2 } as CSSProperties
 
 function App() {
   const [settings, setSettings] = useState<UserSettings>(loadSettings)
@@ -81,6 +77,11 @@ function App() {
 
   const preAlertSeconds = settings.preAlertEnabled ? settings.preAlertMinutes * 60 : 0
   const todayOverride: DayOverride | null = settings.dayOverrides[kstNow.dateKey] ?? null
+  // 단축 수업일에도 화면 표기는 실제 하교 시각과 일치해야 한다(설정 원본값이 아니라 오늘 기준값).
+  const effectiveDismissalTime = useMemo(
+    () => dismissalTimeFor(settings, kstNow.dateKey),
+    [settings, kstNow.dateKey],
+  )
 
   useEffect(() => {
     saveSettings(settings)
@@ -182,8 +183,8 @@ function App() {
     const event = detectScheduleEvent(prev, status, kstNow.daySeconds)
     if (!event) return
     dispatchScheduleEvent(event, status, { sound: settings.soundEnabled, notify: settings.notifyEnabled })
-    if (event.kind === 'dismissed') triggerCelebration(kstNow.dateKey, settings.dismissalTime)
-  }, [status, kstNow.daySeconds, kstNow.dateKey, settings.soundEnabled, settings.notifyEnabled, settings.dismissalTime, triggerCelebration])
+    if (event.kind === 'dismissed') triggerCelebration(kstNow.dateKey, effectiveDismissalTime)
+  }, [status, kstNow.daySeconds, kstNow.dateKey, settings.soundEnabled, settings.notifyEnabled, effectiveDismissalTime, triggerCelebration])
 
   const title = documentTitleFor(status, kstNow)
   useEffect(() => { if (document.title !== title) document.title = title }, [title])
@@ -217,33 +218,31 @@ function App() {
 
   /** M · 차임벨 켜기/끄기. 끌 때는 소리를 내지 않는다. */
   const handleToggleSound = useCallback(() => {
-    setSettings((current) => {
-      const soundEnabled = !current.soundEnabled
-      chimeEngine.setEnabled(soundEnabled)
-      if (soundEnabled) {
-        chimeEngine.unlock()
-        chimeEngine.play('ui')
-      }
-      return { ...current, soundEnabled }
-    })
-  }, [])
+    const soundEnabled = !settings.soundEnabled
+    setSettings((current) => ({ ...current, soundEnabled }))
+    chimeEngine.setEnabled(soundEnabled)
+    if (soundEnabled) {
+      chimeEngine.unlock()
+      chimeEngine.play('ui')
+    }
+  }, [settings.soundEnabled])
 
   /** N · 브라우저 알림 켜기/끄기. 켤 때만 권한을 요청한다. */
   const handleToggleNotify = useCallback(() => {
-    setSettings((current) => {
-      if (current.notifyEnabled) {
-        return { ...current, notifyEnabled: false }
-      }
-      void requestNotificationPermission().then((state) => {
-        setNotificationState(state)
-        if (state !== 'granted') {
-          setSettings((latest) => ({ ...latest, notifyEnabled: false }))
-        }
-      })
-      return { ...current, notifyEnabled: true }
-    })
+    if (settings.notifyEnabled) {
+      setSettings((current) => ({ ...current, notifyEnabled: false }))
+      chimeEngine.play('ui')
+      return
+    }
+    setSettings((current) => ({ ...current, notifyEnabled: true }))
     chimeEngine.play('ui')
-  }, [])
+    void requestNotificationPermission().then((state) => {
+      setNotificationState(state)
+      if (state !== 'granted') {
+        setSettings((latest) => ({ ...latest, notifyEnabled: false }))
+      }
+    })
+  }, [settings.notifyEnabled])
 
   /** F · 전체 화면(교실 TV에 띄워 둘 때). */
   const handleToggleFullscreen = useCallback(() => {
@@ -299,8 +298,7 @@ function App() {
   ])
 
   return (
-    <div className={`app-shell theme-${resolvedTheme}`}>
-      <div className="background-mesh" aria-hidden="true" />
+    <div className="app-shell">
       <a className="skip-link" href="#main-content">본문 바로가기</a>
 
       <div className="page-wrap">
@@ -313,7 +311,7 @@ function App() {
         />
 
         <main id="main-content">
-          <section className="dashboard-intro reveal" style={introRevealStyle}>
+          <section className="dashboard-intro reveal">
             <div className="intro-copy">
               <h2>{greetingForHour(kstNow.hour)}, {settings.displayName || '선생님'}.</h2>
             </div>
@@ -335,7 +333,8 @@ function App() {
               nextSchoolDay={nextSchoolDay}
               preAlertSeconds={preAlertSeconds}
               override={todayOverride}
-              dismissalTime={settings.dismissalTime}
+              dismissalTime={effectiveDismissalTime}
+              overrideDismissalTime={settings.dismissalTime}
               onOverrideChange={handleOverrideChange}
             />
             <BatteryCard metrics={metrics} isTodaySchoolDay={status.day.isSchoolDay && status.day.hasClasses} />
@@ -346,7 +345,7 @@ function App() {
           <WeekOverview now={kstNow} settings={settings} />
         </main>
 
-        <footer className="app-footer reveal" style={footerRevealStyle}>
+        <footer className="app-footer reveal">
           <span>교사 생존 시계 <b>·</b> {kstNow.year} <b>·</b> Asia/Seoul</span>
           <span>단축키 S 설정 · T 화면 모드 · F 전체 화면 · M 소리 · N 알림</span>
         </footer>
@@ -354,7 +353,7 @@ function App() {
 
       <CelebrationToast
         isVisible={isCelebrationVisible}
-        dismissalTime={settings.dismissalTime}
+        dismissalTime={effectiveDismissalTime}
         durationMs={CELEBRATION_MS}
         totalClassCount={status.totalClassCount}
         totalClassSeconds={status.totalClassSeconds}

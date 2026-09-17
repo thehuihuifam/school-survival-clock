@@ -13,8 +13,6 @@ interface PeriodTrackerProps {
   preAlertSeconds: number
 }
 
-const revealStyle = { '--index': 0 } as CSSProperties
-
 const SLOT_ICONS: Record<SlotKind, SolarIconName> = {
   class: 'notebook-bold',
   lunch: 'plate-bold',
@@ -77,13 +75,10 @@ export function PeriodTracker({ now, status, upcoming, preAlertSeconds }: Period
   }, [upcoming])
 
   return (
-    <section className="surface-card period-card reveal reveal-on-scroll" style={revealStyle}>
+    <section className="surface-card period-card reveal">
       <div className="period-header">
         <div className="period-heading">
           <h2>오늘의 시간표</h2>
-          <p className="card-subtitle">
-            마지막 교시 뒤부터 하교까지는 방과후·업무로 표시돼요. 설정에서 요일별로 편집할 수 있어요.
-          </p>
         </div>
         <div className={`period-now-badge ${status.isBreak ? 'is-break' : ''} ${status.phase === 'dismissed' ? 'is-done' : ''}`}>
           <span className="period-now-pulse" aria-hidden="true" />

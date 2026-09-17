@@ -59,6 +59,22 @@ describe('getWeekOverview', () => {
     expect(overview.days[5].classCount).toBe(0)
   })
 
+  it('하교 시각이 지나면 오늘은 남은 수업일에서 빠진다', () => {
+    // 목요일 21:00 KST — 오늘 수업은 이미 끝났으므로 남은 수업일은 금요일 하루다.
+    const overview = overviewAt('2026-09-17T12:00:00Z')
+
+    expect(overview.days[3].isToday).toBe(true)
+    expect(overview.schoolDayCount).toBe(5)
+    expect(overview.remainingSchoolDayCount).toBe(1)
+  })
+
+  it('하교 시각 전에는 오늘을 남은 수업일로 센다', () => {
+    // 목요일 16:29 KST — 하교 1분 전.
+    const overview = overviewAt('2026-09-17T07:29:00Z')
+
+    expect(overview.remainingSchoolDayCount).toBe(2)
+  })
+
   it('수업 시간이 가장 긴 날을 찾아 준다', () => {
     const overview = getWeekOverview(THURSDAY, settingsWith({}))
 

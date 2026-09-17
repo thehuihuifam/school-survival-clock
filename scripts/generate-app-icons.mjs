@@ -151,10 +151,10 @@ function composite(target, offset, alpha, color) {
 
 const DESIGN_SIZE = 512
 const PALETTE = {
-  gradientStart: hexToRgb('#7ef0c4'),
-  gradientEnd: hexToRgb('#046c50'),
-  ink: hexToRgb('#052e21'),
-  spark: hexToRgb('#eafff6'),
+  gradientStart: hexToRgb('#0066cc'),
+  gradientEnd: hexToRgb('#004f9e'),
+  ink: hexToRgb('#ffffff'),
+  spark: hexToRgb('#ffffff'),
 }
 
 const BATTERY = { cx: 236, cy: 256, halfWidth: 132, halfHeight: 78, radius: 42, stroke: 26 }
@@ -180,7 +180,7 @@ function renderIcon(size) {
       const dx = (x + 0.5) / scale
       const dy = (y + 0.5) / scale
 
-      // 1. Rounded-square backdrop with a diagonal emerald gradient.
+      // 1. Rounded-square backdrop with a shallow Action Blue gradient.
       const backdrop = coverage(roundedRectDistance(dx, dy, 256, 256, 256, 256, 112))
       if (backdrop <= 0) {
         rgba[offset + 3] = 0

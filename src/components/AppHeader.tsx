@@ -1,4 +1,3 @@
-import type { CSSProperties } from 'react'
 import { SolarIcon } from './Icon'
 import type { ThemeMode, ResolvedTheme } from '../types'
 
@@ -9,8 +8,6 @@ interface AppHeaderProps {
   onCycleTheme: () => void
   onOpenSettings: () => void
 }
-
-const revealStyle = { '--index': 0 } as CSSProperties
 
 const THEME_LABEL: Record<ThemeMode, string> = {
   dark: '다크 모드',
@@ -49,7 +46,7 @@ export function AppHeader({
       : THEME_LABEL[themeMode]
 
   return (
-    <header className="topbar reveal" style={revealStyle}>
+    <header className="topbar reveal">
       <div className="brand-lockup">
         <div className="brand-mark" aria-hidden="true">
           <SolarIcon name="battery-charge-bold" size={20} />
