@@ -10,7 +10,7 @@
  *   who opened the app once keeps full fidelity on the school's flaky Wi-Fi.
  */
 
-const CACHE_VERSION = 'survival-clock-v5'
+const CACHE_VERSION = 'survival-clock-v6'
 
 /** Everything needed for the first paint, precached on install. */
 const APP_SHELL = [

@@ -22,7 +22,7 @@ describe('normalizeSettings', () => {
   })
 
   it('reports the current schema version', () => {
-    expect(defaults().version).toBe(3)
+    expect(defaults().version).toBe(4)
   })
 
   it('upgrades a v1 payload (theme instead of themeMode, no timetable)', () => {

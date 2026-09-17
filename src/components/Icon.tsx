@@ -18,18 +18,16 @@ interface SolarIconProps {
   name: SolarIconName
   /** Pixel number or any CSS length; applied to width/height/font-size. */
   size?: number | string
-  /** Continuous rotation (transform based, disabled by `prefers-reduced-motion`). */
-  spin?: boolean
   className?: string
   /** When set, the icon is exposed to assistive tech as `role="img"`. */
   label?: string
 }
 
-export function SolarIcon({ name, size = 20, spin = false, className, label }: SolarIconProps) {
+export function SolarIcon({ name, size = 20, className, label }: SolarIconProps) {
   const glyph = SOLAR_ICON_GLYPHS[name]
   const dimension = typeof size === 'number' ? `${size}px` : size
   const style: CSSProperties = { width: dimension, height: dimension, fontSize: dimension }
-  const classes = ['solar-icon', spin ? 'icon-spin' : '', className ?? ''].filter(Boolean).join(' ')
+  const classes = className ? `solar-icon ${className}` : 'solar-icon'
 
   return (
     <svg

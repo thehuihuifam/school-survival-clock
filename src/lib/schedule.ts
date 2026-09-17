@@ -20,6 +20,7 @@ import {
   type TimetablePeriod,
   type UserSettings,
 } from '../types'
+import { builtinHolidayLabel } from './holidays'
 import { getAutoSemesterWindow, type SemesterWindow } from './semesterWindow'
 import {
   DAY_IN_SECONDS,
@@ -34,6 +35,7 @@ import {
   shiftDateKey,
   weekdayIndexFromDateKey,
   weekdayLabel,
+  withParticle,
 } from './time'
 
 /** Gaps shorter than this are treated as back-to-back blocks (no break slot). */
@@ -280,8 +282,23 @@ function truncatePeriods(periods: TimetablePeriod[], hardStopSeconds?: number): 
  * Day classification
  * ------------------------------------------------------------------ */
 
+/**
+ * 이 날짜가 쉬는 날인가?
+ *
+ * 직접 등록한 휴일이 항상 우선한다(학교마다 다른 재량휴업일·체험학습일을
+ * 내장 달력이 덮어쓰면 안 되기 때문). 직접 등록한 항목이 없고 `autoHolidays`가
+ * 켜져 있으면 내장 대한민국 공휴일 달력을 참조한다.
+ */
 export function isHolidayDate(settings: UserSettings, dateKey: string): Holiday | null {
-  return settings.holidays.find((holiday) => holiday.date === dateKey) ?? null
+  const registered = settings.holidays.find((holiday) => holiday.date === dateKey)
+  if (registered) {
+    return registered
+  }
+  if (!settings.autoHolidays) {
+    return null
+  }
+  const builtin = builtinHolidayLabel(dateKey)
+  return builtin === null ? null : { date: dateKey, label: builtin }
 }
 
 export function isSchoolWeekday(settings: UserSettings, weekdayIndex: number) {
@@ -395,7 +412,9 @@ export function getDayContext(now: KstTimeParts, settings: UserSettings, outline
     return {
       dayType: 'holiday',
       label: holiday.label.trim() || '공휴일',
-      description: holiday.label.trim() ? `${holiday.label.trim()}로 쉬는 날이에요.` : '등록한 휴일이라 학교가 쉬어요.',
+      description: holiday.label.trim()
+        ? `${withParticle(holiday.label, '으로', '로')} 쉬는 날이에요.`
+        : '등록한 휴일이라 학교가 쉬어요.',
       isSchoolDay: false,
       hasClasses: false,
       holidayLabel: holiday.label.trim() || null,

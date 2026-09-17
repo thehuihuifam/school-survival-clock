@@ -1,7 +1,7 @@
 {
   "name": "school-survival-clock",
   "private": true,
-  "version": "2.1.0",
+  "version": "2.2.0",
   "type": "module",
   "description": "한국 교사를 위한 실시간 생존 시계 · 요일별 시간표 레이더 · 방학 D-Day 배터리 대시보드",
   "scripts": {

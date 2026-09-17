@@ -87,7 +87,6 @@ svg{display:inline-block;flex:0 0 auto;vertical-align:-.15em}
 .brand-lockup{display:flex;align-items:center;gap:11px;min-width:0}
 .brand-mark{display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#6ee7b7,#059669);color:#052e1f;flex:0 0 38px;box-shadow:0 8px 20px rgba(5,150,105,.22)}
 .brand-copy{min-width:0}
-.brand-kicker{font-size:9px;font-weight:700;letter-spacing:.18em;color:var(--accent);line-height:1}
 .brand-lockup h1{font-size:16px;font-weight:700;letter-spacing:-.03em;line-height:1.2;white-space:nowrap}
 .brand-lockup h1 span{color:var(--muted);font-weight:500}
 .header-actions{display:flex;align-items:center;gap:8px}
@@ -99,10 +98,7 @@ svg{display:inline-block;flex:0 0 auto;vertical-align:-.15em}
 .offline-dot{width:7px;height:7px;border-radius:50%;background:var(--warn);box-shadow:0 0 0 4px var(--warn-soft);display:inline-block}
 /* intro */
 .dashboard-intro{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;padding:20px 2px 14px}
-.intro-kicker{font-size:10px;font-weight:700;letter-spacing:.16em;color:var(--accent);margin-bottom:6px}
 .dashboard-intro h2{font-size:clamp(22px,3vw,30px);font-weight:700;letter-spacing:-.035em;line-height:1.25}
-.intro-sub{margin-top:6px;color:var(--muted);font-size:13px}
-.intro-side-note{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12px}
 /* cards */
 .surface-card{position:relative;border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--surface);box-shadow:var(--shadow);overflow:hidden}
 .hero-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:16px}
@@ -110,9 +106,8 @@ svg{display:inline-block;flex:0 0 auto;vertical-align:-.15em}
 /* clock hero */
 .clock-card{padding:22px 22px 18px;display:flex;flex-direction:column;min-height:420px}
 .card-heading-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-.eyebrow{display:flex;align-items:center;gap:7px;font-size:9px;font-weight:700;letter-spacing:.16em;color:var(--muted)}
-.eyebrow-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--accent-soft);flex:0 0 6px}
-.card-subtitle{margin-top:6px;color:var(--muted);font-size:12px}
+.card-title{font-size:13px;font-weight:700;letter-spacing:-.01em;color:var(--text)}
+.card-subtitle{margin-top:6px;color:var(--muted);font-size:12px;line-height:1.5;max-width:44ch}
 .day-badge{display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border-radius:var(--radius-pill);border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-size:11px;font-weight:700;letter-spacing:.02em;white-space:nowrap}
 .day-badge.is-school{color:var(--accent);border-color:var(--accent-border);background:var(--accent-soft)}
 .day-badge.is-rest{color:var(--rose);border-color:rgba(251,113,133,.22);background:var(--rose-soft)}
@@ -120,11 +115,12 @@ svg{display:inline-block;flex:0 0 auto;vertical-align:-.15em}
 .clock-display{display:flex;align-items:baseline;gap:8px;margin-top:18px}
 .clock-time{font-family:var(--font-mono);font-size:clamp(48px,7vw,84px);font-weight:400;letter-spacing:-.08em;line-height:.95;color:var(--text)}
 .clock-seconds{font-family:var(--font-mono);font-size:clamp(18px,2.2vw,28px);font-weight:500;color:var(--accent);letter-spacing:-.03em}
-.clock-seconds-label{font-size:9px;font-weight:700;letter-spacing:.18em;color:var(--faint);align-self:flex-end;padding-bottom:6px}
 .date-line{display:flex;align-items:center;gap:8px;margin-top:10px;color:var(--muted);font-size:12.5px}
 .date-line-sep{color:var(--faint)}
-.countdown-panel{margin-top:16px;padding:16px 16px 12px;border-radius:16px;border:1px solid var(--border);background:var(--surface2);display:grid;grid-template-columns:1fr auto;gap:10px 14px;cursor:pointer;transition:border-color .2s}
-.countdown-panel:hover{border-color:var(--border2)}
+.countdown-panel{margin-top:16px;padding:16px 16px 12px;border-radius:16px;border:1px solid var(--border);background:var(--surface2);display:grid;grid-template-columns:1fr auto;gap:10px 14px;transition:border-color .2s}
+.countdown-panel.is-interactive{cursor:pointer}
+.countdown-panel.is-interactive:hover{border-color:var(--border2)}
+.countdown-panel.is-interactive:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .countdown-panel.countdown-pre{border-color:rgba(251,191,36,.32)}
 .countdown-panel.countdown-break .countdown-value{color:var(--rose)}
 .countdown-copy{display:flex;gap:10px;min-width:0}
@@ -142,15 +138,12 @@ svg{display:inline-block;flex:0 0 auto;vertical-align:-.15em}
 .countdown-bar-fill{position:absolute;inset:0;border-radius:inherit;background:linear-gradient(90deg,var(--accent2),var(--accent));transform-origin:left;transform:scaleX(var(--fill,0));transition:transform .9s var(--ease)}
 .countdown-panel.countdown-pre .countdown-bar-fill{background:linear-gradient(90deg,var(--warn),var(--accent))}
 .countdown-bar-label{position:absolute;right:0;top:8px;font-size:10px;color:var(--faint);letter-spacing:.06em}
-.today-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
-.meta-chip{display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border-radius:999px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-size:11.5px;font-weight:600}
-.meta-chip b{color:var(--text);font-weight:700}
-.meta-chip.accent{color:var(--accent);border-color:var(--accent-border);background:var(--accent-soft)}
 .clock-footer{margin-top:auto;padding-top:16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
 .teacher-greeting{display:flex;align-items:center;gap:10px;min-width:0}
 .avatar-chip{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#052e1f;font-weight:700;font-size:13px;flex:0 0 32px}
-.muted-label{font-size:9px;font-weight:700;letter-spacing:.14em;color:var(--faint)}
+.teacher-greeting-copy{min-width:0;display:flex;flex-direction:column;gap:1px}
 .teacher-greeting strong{font-size:13px;font-weight:700;letter-spacing:-.02em;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.teacher-greeting-copy span{font-size:11px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tiny-status{font-size:11.5px;color:var(--faint);display:flex;align-items:center;gap:5px}
 /* override bar compact */
 .override-bar{margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;align-items:center;gap:8px}
@@ -168,7 +161,6 @@ svg{display:inline-block;flex:0 0 auto;vertical-align:-.15em}
 .battery-title{display:flex;align-items:center;gap:10px}
 .battery-icon{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent-border)}
 .battery-head h2{font-size:16px;font-weight:700;letter-spacing:-.02em}
-.battery-head .eyebrow{color:var(--accent)}
 .battery-status{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;border:1px solid var(--border);background:var(--surface2);color:var(--muted)}
 .battery-main{margin-top:18px}
 .battery-top-row{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
@@ -250,8 +242,23 @@ svg{display:inline-block;flex:0 0 auto;vertical-align:-.15em}
 .rail-item.is-active .rail-countdown{color:var(--accent)}
 .rail-imminent-chip{display:inline-flex;align-items:center;gap:3px;color:var(--warn);font-size:9px;font-weight:700;letter-spacing:.04em}
 .rail-empty{font-size:12px;color:var(--muted)}
-.rail-note{margin-top:auto;padding-top:10px;border-top:1px dashed var(--border);font-size:10.5px;color:var(--faint);line-height:1.5;display:flex;gap:6px}
-.period-legend{margin-top:14px;font-size:11px;color:var(--faint);display:flex;gap:6px;line-height:1.5}
+.rail-count{display:inline-grid;place-items:center;min-width:17px;height:17px;padding:0 5px;margin-left:2px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:10px;font-weight:700}
+/* week overview */
+.week-card{padding:20px 22px 18px}
+.week-total{display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border-radius:var(--radius-pill);border:1px solid var(--accent-border);background:var(--accent-soft);color:var(--accent);font-size:11px;font-weight:700;white-space:nowrap}
+.week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:18px}
+.week-day{display:flex;flex-direction:column;align-items:center;gap:7px;padding:10px 4px 9px;border-radius:13px;border:1px solid var(--border);background:var(--surface2);min-width:0;transition:border-color .2s,background .2s}
+.week-day.is-past{opacity:.55}
+.week-day.is-current{border-color:var(--accent-border);background:var(--accent-soft);opacity:1}
+.week-day.is-peak .week-day-fill{background:linear-gradient(180deg,var(--warn),var(--accent))}
+.week-day-label{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.02em}
+.week-day.is-current .week-day-label{color:var(--accent)}
+.week-day.is-holiday .week-day-label,.week-day.is-weekend .week-day-label{color:var(--rose)}
+.week-day-bar{position:relative;width:100%;height:54px;border-radius:8px;background:var(--track);display:grid;place-items:center;overflow:hidden}
+.week-day-fill{position:absolute;left:0;right:0;bottom:0;height:calc(var(--height,0) * 100%);border-radius:8px;background:linear-gradient(180deg,var(--accent2),var(--accent));transition:height .6s var(--ease)}
+.week-day-icon{color:var(--faint);display:grid;place-items:center}
+.week-day-value{font-size:10px;color:var(--faint);font-weight:600;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.week-day.is-current .week-day-value{color:var(--text)}
 /* celebration */
 .celebration-toast{position:fixed;right:16px;bottom:16px;z-index:70;display:flex;gap:12px;max-width:min(400px,calc(100vw - 24px));padding:16px 16px 20px;border-radius:18px;border:1px solid var(--accent-border);background:color-mix(in srgb,var(--surface) 92%,transparent);box-shadow:var(--shadow);backdrop-filter:blur(14px);animation:toast-in .42s var(--ease) both;overflow:hidden}
 .celebration-icon{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#052e1f;flex:0 0 40px}
@@ -341,6 +348,27 @@ svg{display:inline-block;flex:0 0 auto;vertical-align:-.15em}
 .holiday-date{font-family:var(--font-mono);font-size:11px;color:var(--text);white-space:nowrap;display:flex;gap:5px;align-items:center}
 .holiday-label{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);font-weight:600}
 .holiday-state{padding:2px 7px;border-radius:999px;background:var(--track);color:var(--muted);font-size:10px;font-weight:600}
+.settings-inline-field{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:11px 13px;border-radius:12px;border:1px solid var(--border);background:var(--surface2)}
+.settings-inline-label{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--text2);white-space:nowrap}
+.volume-control{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.volume-slider{width:150px;height:4px;border-radius:999px;background:var(--track);appearance:none;cursor:pointer}
+.volume-slider::-webkit-slider-thumb{appearance:none;width:15px;height:15px;border-radius:50%;background:var(--accent);border:2px solid var(--surface);box-shadow:0 1px 4px rgba(0,0,0,.28);cursor:pointer}
+.volume-slider::-moz-range-thumb{width:15px;height:15px;border:2px solid var(--surface);border-radius:50%;background:var(--accent);cursor:pointer}
+.volume-slider:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.volume-value{font-family:var(--font-mono);font-size:11.5px;color:var(--muted);min-width:34px;text-align:right}
+.holiday-auto-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:12px 13px;border-radius:12px;border:1px solid var(--border);background:var(--surface2)}
+.holiday-auto-toggle{display:flex;align-items:flex-start;gap:10px;cursor:pointer;min-width:0}
+.holiday-auto-toggle input{margin-top:2px;width:16px;height:16px;flex:0 0 16px;accent-color:var(--accent);cursor:pointer}
+.holiday-auto-copy{display:flex;flex-direction:column;gap:3px;min-width:0}
+.holiday-auto-copy strong{font-size:12.5px;font-weight:700;color:var(--text)}
+.holiday-auto-copy span{font-size:11px;color:var(--muted);line-height:1.5}
+.holiday-auto-count{padding:3px 9px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:10.5px;font-weight:700;white-space:nowrap}
+.holiday-auto-list{display:flex;flex-wrap:wrap;gap:6px}
+.holiday-auto-list li{display:flex;align-items:center;gap:6px;padding:5px 9px;border-radius:999px;border:1px dashed var(--border2);background:var(--surface);font-size:10.5px}
+.holiday-auto-list li.is-past{opacity:.5}
+.holiday-auto-date{font-family:var(--font-mono);color:var(--muted)}
+.holiday-auto-label{color:var(--text2);font-weight:600}
+.holiday-note{margin-left:6px;padding:1px 6px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:9.5px;font-style:normal;font-weight:700}
 .data-actions{display:flex;gap:8px;flex-wrap:wrap}
 .shortcut-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:7px}
 .shortcut-list li{display:flex;gap:8px;align-items:center;padding:8px 10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:11.5px}
@@ -388,4 +416,8 @@ svg{display:inline-block;flex:0 0 auto;vertical-align:-.15em}
   .clock-card,.battery-card,.period-card{padding-left:16px;padding-right:16px}
   .weekday-picker{gap:4px}
   .celebration-toast{right:12px;left:12px;bottom:12px;max-width:none}
+  .week-grid{grid-template-columns:repeat(4,1fr)}
+  .week-day-bar{height:44px}
+  .settings-inline-field{align-items:flex-start;flex-direction:column}
+  .holiday-auto-row{flex-direction:column}
 }

@@ -7,6 +7,7 @@ import { useFocusTrap } from './settings/useFocusTrap'
 import { cloneSettings, createDefaultSettings, parseSettingsJson, serializeSettings } from '../lib/settings'
 import { describeSemesterWindow, getAutoSemesterWindow } from '../lib/semesterWindow'
 import { requestNotificationPermission } from '../lib/notify'
+import { chimeEngine } from '../lib/sound'
 import { isValidDateInput, isValidTimeInput, parseDateInput, parseTimeToSeconds } from '../lib/time'
 import { PRE_ALERT_MINUTE_OPTIONS, type ThemeMode, type UserSettings } from '../types'
 import type { NotificationState } from '../lib/notify'
@@ -182,8 +183,8 @@ export function SettingsModal({
           <div className="modal-title-lockup">
             <div className="section-icon settings-icon"><SolarIcon name="settings-bold" size={19} /></div>
             <div>
-              <p className="eyebrow">PERSONAL CONTROL ROOM</p>
               <h2 id="settings-title">나의 교실 세팅</h2>
+              <p className="card-subtitle">이 기기에만 저장돼요</p>
             </div>
           </div>
           <button className="modal-close" type="button" onClick={onClose} aria-label="설정 닫기 (Esc)">
@@ -269,6 +270,40 @@ export function SettingsModal({
                       checked={draft.soundEnabled}
                       onChange={(soundEnabled) => setDraft({ ...draft, soundEnabled })}
                     />
+
+                    {draft.soundEnabled && (
+                      <div className="settings-inline-field">
+                        <span className="settings-inline-label">
+                          <SolarIcon name="volume-bold" size={15} /> 음량
+                        </span>
+                        <div className="volume-control">
+                          <input
+                            type="range"
+                            className="volume-slider"
+                            min={0}
+                            max={100}
+                            step={5}
+                            value={draft.soundVolume}
+                            aria-label="차임벨 음량"
+                            aria-valuetext={`${draft.soundVolume}퍼센트`}
+                            onChange={(event) =>
+                              setDraft({ ...draft, soundVolume: Number(event.target.value) })
+                            }
+                          />
+                          <span className="volume-value">{draft.soundVolume}%</span>
+                          <button
+                            type="button"
+                            className="ghost-button is-small"
+                            onClick={() => {
+                              chimeEngine.setVolume(draft.soundVolume / 100)
+                              chimeEngine.preview('class-started')
+                            }}
+                          >
+                            <SolarIcon name="volume-bold" size={14} /> 미리 듣기
+                          </button>
+                        </div>
+                      </div>
+                    )}
 
                     <ToggleRow
                       id="pre-alert-toggle"
@@ -406,7 +441,7 @@ export function SettingsModal({
 
                   <SettingsSection
                     title="쉬는 날 관리"
-                    description="공휴일, 재량휴업일, 체험학습일을 등록하면 그날은 쉬는 날로 표시되고 수업일 수에서도 제외됩니다."
+                    description="등록한 날은 쉬는 날로 표시되고 수업일 수에서도 빠집니다."
                     icon="calendar-add-bold"
                   >
                     <HolidayEditor
@@ -414,7 +449,9 @@ export function SettingsModal({
                       todayDateKey={todayDateKey}
                       semesterStart={draft.semesterStart}
                       vacationDate={draft.vacationDate}
+                      autoHolidays={draft.autoHolidays}
                       onChange={(holidays) => setDraft({ ...draft, holidays })}
+                      onAutoHolidaysChange={(autoHolidays) => setDraft({ ...draft, autoHolidays })}
                     />
                   </SettingsSection>
                 </>

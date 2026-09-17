@@ -62,13 +62,17 @@ describe('App render', () => {
   it('renders a full school day dashboard', () => {
     const html = renderAt('2026-09-17T00:10:00Z') // 목요일 09:10 KST
 
-    expect(html).toContain('LIVE CLOCK')
     expect(html).toContain('방학 D-Day 게이지')
-    expect(html).toContain('오늘의 시간표 레이더')
+    expect(html).toContain('오늘의 시간표')
     expect(html).toContain('1교시 진행 중')
-    // Quote and Snapshot cards removed to reduce duplication
-    expect(html).not.toContain('선생님 공감 비타민')
-    expect(html).not.toContain('오늘의 생존 스냅샷')
+    expect(html).toContain('이번 주')
+    // 장식용 영어 카피는 화면에서 완전히 사라져야 한다.
+    expect(html).not.toContain('LIVE CLOCK')
+    expect(html).not.toContain('CLASSROOM RADAR')
+    expect(html).not.toContain('NEXT UP')
+    expect(html).not.toContain("TODAY'S CREW")
+    expect(html).not.toContain('SEMESTER SURVIVAL')
+    expect(html).not.toContain('SCHOOL SURVIVAL CLOCK')
   })
 
   it('greets the teacher without repeating the honorific', () => {
@@ -81,33 +85,36 @@ describe('App render', () => {
   it('renders the pre-school countdown before the first bell', () => {
     const html = renderAt('2026-09-16T23:30:00Z') // 목요일 08:30 KST
     expect(html).toContain('1교시까지')
-    expect(html).toContain('BEFORE THE BELL')
+    expect(html).toContain('등교 전')
   })
 
   it('turns on the pre-bell state inside the warning window', () => {
     const html = renderAt('2026-09-16T23:58:00Z') // 목요일 08:58 KST, 2분 전
-    expect(html).toContain('GET READY · 예비종')
+    expect(html).toContain('예비종')
     expect(html).toContain('1교시 곧 시작')
-    expect(html).not.toContain('BEFORE THE BELL')
+    // 히어로 카운트다운은 '등교 전'이 아니라 '예비종'으로 바뀐다
+    // (레이더 배지의 단계 라벨은 그대로 '등교 전'이다).
+    expect(html).toContain('countdown-kicker">예비종<')
+    expect(html).not.toContain('countdown-kicker">등교 전<')
   })
 
   it('renders the recovery state on a weekend', () => {
     const html = renderAt('2026-09-19T04:00:00Z') // 토요일 13:00 KST
-    expect(html).toContain('RECOVERY MODE')
+    expect(html).toContain('쉬는 날')
     expect(html).toContain('다음 등교')
     expect(html).toContain('주말')
   })
 
   it('renders the dismissed state after the dismissal bell', () => {
     const html = renderAt('2026-09-17T08:00:00Z') // 목요일 17:00 KST
-    expect(html).toContain('MISSION COMPLETE')
-    expect(html).toContain('오늘 일정 완료')
+    expect(html).toContain('하루 완료')
+    expect(html).toContain('오늘 일정 끝')
   })
 
   it('goes straight into the vacation state during winter break', () => {
     const html = renderAt('2027-01-10T02:00:00Z') // 겨울방학 중
     expect(html).toContain('방학 중')
-    expect(html).toContain('RECOVERY MODE')
+    expect(html).toContain('쉬는 날')
     expect(html).not.toContain('D-0')
   })
 
@@ -127,7 +134,7 @@ describe('App render', () => {
     })
 
     expect(html).toContain('재량휴업')
-    expect(html).toContain('RECOVERY MODE')
+    expect(html).toContain('쉬는 날')
     expect(html).not.toContain('학교 가는 날')
     // The weekday timetable must not leak into the exception day.
     expect(html).toContain('오늘은 수업이 없어요')
@@ -141,7 +148,9 @@ describe('App render', () => {
 
     expect(html).toContain('단축 하교 13:00')
     expect(html).toContain('오늘 하루만')
-    expect(html).not.toContain('6교시')
+    // 오늘 타임라인은 4교시에서 끝난다 (주간 카드의 다른 요일은 그대로 6교시).
+    expect(html).not.toContain('slot-name">6교시<')
+    expect(html).toContain('slot-name">4교시<')
   })
 
   /* -------------------------------------------------------------- *
@@ -151,11 +160,11 @@ describe('App render', () => {
   it('stays in the dismissed state at 23:59 KST', () => {
     const html = renderAt('2026-09-17T14:59:00Z') // 목요일 23:59 KST
 
-    expect(html).toContain('MISSION COMPLETE')
+    expect(html).toContain('하루 완료')
     expect(html).toContain('23:59')
     expect(html).toContain('26.09.17 목요일')
     // The shared HH:MM formatter renders the dismissal label here.
-    expect(html).toContain('16:30 하교 · 수고하셨습니다')
+    expect(html).toContain('16:30 하교 · 수고하셨어요')
   })
 
   it('rolls over to the next school day exactly at KST midnight', () => {
@@ -167,15 +176,15 @@ describe('App render', () => {
     expect(html).toContain('D-110')
     expect(html).not.toContain('26.09.17')
     // The new day starts in the pre-bell state, not still dismissed.
-    expect(html).toContain('BEFORE THE BELL')
+    expect(html).toContain('등교 전')
     expect(html).toContain('1교시까지')
-    expect(html).not.toContain('MISSION COMPLETE')
+    expect(html).not.toContain('하루 완료')
   })
 
   it('counts down correctly in the pre-dawn hours of a school day', () => {
     const html = renderAt('2026-09-17T17:30:00Z') // 금요일 02:30 KST
 
-    expect(html).toContain('BEFORE THE BELL')
+    expect(html).toContain('등교 전')
     expect(html).toContain('6시간 30분 남음')
     expect(html).toContain('06:30:00')
     expect(html).toContain('새벽까지 고생 많으셨어요')
@@ -184,11 +193,41 @@ describe('App render', () => {
   it('shows recovery mode when opened in the pre-dawn hours of a weekend', () => {
     const html = renderAt('2026-09-18T17:30:00Z') // 토요일 02:30 KST
 
-    expect(html).toContain('RECOVERY MODE')
+    expect(html).toContain('쉬는 날')
     expect(html).toContain('주말')
-    expect(html).not.toContain('MISSION COMPLETE')
+    expect(html).not.toContain('하루 완료')
     // The next-school-day date comes from the shared short-date formatter.
     expect(html).toContain('다음 등교 월요일 09.21')
     expect(html).toContain('첫 일정 09:00')
+  })
+
+  it('renders the week overview with every weekday', () => {
+    const html = renderAt('2026-09-17T00:10:00Z') // 목요일 09:10 KST
+
+    expect(html).toContain('이번 주')
+    for (const weekday of ['월', '화', '수', '목', '금', '토', '일']) {
+      expect(html).toContain(`week-day-label">${weekday}<`)
+    }
+    // 목요일이 오늘로 표시된다.
+    expect(html).toContain('aria-current="date"')
+  })
+
+  it('treats a built-in public holiday as a day off', () => {
+    // 2026-09-25 (금) 추석. 내장 공휴일 달력이 기본으로 켜져 있어야 한다.
+    const html = renderAt('2026-09-25T00:10:00Z')
+
+    expect(html).toContain('추석')
+    expect(html).toContain('쉬는 날')
+    expect(html).not.toContain('1교시 진행 중')
+  })
+
+  it('keeps the documented keyboard shortcuts in the footer', () => {
+    const html = renderAt('2026-09-17T00:10:00Z')
+
+    expect(html).toContain('S 설정')
+    expect(html).toContain('T 화면 모드')
+    expect(html).toContain('F 전체 화면')
+    expect(html).toContain('M 소리')
+    expect(html).toContain('N 알림')
   })
 })

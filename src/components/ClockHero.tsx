@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { formatFullKstDate, formatKstDate, formatMinutes, pad, formatPercent } from '../lib/time'
 import { DAY_TYPE_TONES, greetingForHour, heroHeadline } from '../lib/copy'
 import { DayOverrideBar } from './DayOverrideBar'
@@ -25,7 +25,18 @@ function avatarInitial(displayName: string) {
   return /[가-힣]/.test(first) ? first : first.toUpperCase()
 }
 
-type FocusMode = 'auto' | 'dismissal' | 'slot'
+function hms(totalSeconds: number) {
+  const safe = Math.max(0, totalSeconds)
+  return `${pad(Math.floor(safe / 3600))}:${pad(Math.floor((safe % 3600) / 60))}:${pad(safe % 60)}`
+}
+
+/**
+ * 카운트다운이 무엇을 세고 있는지.
+ * `auto` = 상태에 맞춰 자동, `slot` = 지금 교시, `dismissal` = 하교까지.
+ */
+type FocusMode = 'auto' | 'slot' | 'dismissal'
+
+const FOCUS_ORDER: FocusMode[] = ['auto', 'slot', 'dismissal']
 
 export function ClockHero({
   now,
@@ -44,51 +55,73 @@ export function ClockHero({
     [status, nextSchoolDay, preAlertSeconds],
   )
 
-  const spokenTime = `${now.hour}시 ${now.minute}분`
-  const barFill = Math.min(1, Math.max(0.01, headline.barProgress / 100))
+  const isOff = status.phase === 'off-day'
+  // 쉬는 날·하교 후에는 전환할 대상이 없다. 이때는 버튼 시맨틱도 주지 않는다.
+  const canToggleFocus = !isOff && status.phase !== 'dismissed'
 
-  // Focus toggle logic: tapping countdown cycles
+  // 하교 후나 휴일로 넘어가면 선택해 둔 초점을 자동으로 되돌린다.
+  // (그렇지 않으면 다음 날 아침에 엉뚱한 카운트다운이 남아 있다.)
+  useEffect(() => {
+    if (!canToggleFocus) {
+      setFocus('auto')
+    }
+  }, [canToggleFocus])
+
   const handleToggleFocus = () => {
-    setFocus((f) => {
-      if (status.phase !== 'in-slot') return 'auto'
-      if (f === 'auto') return 'slot'
-      if (f === 'slot') return 'dismissal'
-      return 'auto'
+    if (!canToggleFocus) return
+    setFocus((current) => {
+      const next = FOCUS_ORDER[(FOCUS_ORDER.indexOf(current) + 1) % FOCUS_ORDER.length]
+      // 진행 중인 블록이 없으면 `slot`은 건너뛴다.
+      if (next === 'slot' && !status.activeSlot) {
+        return 'dismissal'
+      }
+      return next
     })
   }
 
-  // When focus is slot, show active slot remaining; when dismissal, show day remaining
-  const displayValue = useMemo(() => {
+  const focused = useMemo(() => {
     if (focus === 'slot' && status.activeSlot) {
       return {
-        kicker: `NOW · ${status.activeSlot.label}`,
+        kicker: '현재 블록',
         title: `${status.activeSlot.label} 남은 시간`,
-        value: `${pad(Math.floor(status.secondsRemaining / 3600))}:${pad(Math.floor((status.secondsRemaining % 3600) / 60))}:${pad(status.secondsRemaining % 60)}`,
-        note: `${status.activeSlot.timeLabel} · ${Math.round(status.slotProgress)}% 진행`,
+        value: hms(status.secondsRemaining),
+        note: `${status.activeSlot.timeLabel} · ${formatPercent(status.slotProgress, 0)}% 지남`,
+        valueNote: `하교까지 ${formatMinutes(Math.max(0, status.outline.dismissalSeconds - now.daySeconds))}`,
         bar: status.slotProgress,
+        icon: 'notebook-bold' as const,
       }
     }
-    if (focus === 'dismissal' && status.phase !== 'off-day' && status.phase !== 'dismissed') {
-      const remain = status.outline.dismissalSeconds - now.daySeconds
-      const safe = Math.max(0, remain)
+    if (focus === 'dismissal' && canToggleFocus) {
+      const remain = Math.max(0, status.outline.dismissalSeconds - now.daySeconds)
       return {
-        kicker: 'TODAY LEFT · 하교까지',
-        title: `하교까지 ${formatMinutes(safe)}`,
-        value: `${pad(Math.floor(safe / 3600))}:${pad(Math.floor((safe % 3600) / 60))}:${pad(safe % 60)}`,
-        note: `하교 ${formatFullKstDate(now).split(' ').slice(-1)} ${dismissalTime} · 오늘 ${status.totalClassCount}교시`,
+        kicker: '하교까지',
+        title: `하교까지 ${formatMinutes(remain)}`,
+        value: hms(remain),
+        note: `${dismissalTime} 하교 · 오늘 ${status.totalClassCount}교시`,
+        valueNote: `남은 수업 ${status.remainingClassCount}교시`,
         bar: status.dayProgress,
+        icon: 'flag-bold' as const,
       }
     }
     return null
-  }, [focus, status, now.daySeconds, dismissalTime, now])
+  }, [focus, status, now.daySeconds, dismissalTime, canToggleFocus])
 
-  const isOff = status.phase === 'off-day'
+  const barValue = focused ? focused.bar : headline.barProgress
+  const barFill = Math.min(1, Math.max(0.01, barValue / 100))
+
+  const focusHint = canToggleFocus
+    ? focus === 'auto'
+      ? '누르면 현재 블록 / 하교까지로 전환'
+      : focus === 'slot'
+        ? '누르면 하교까지 남은 시간'
+        : '누르면 자동 표시로 돌아가기'
+    : undefined
 
   return (
     <section className={`surface-card clock-card reveal hero-tone-${headline.tone}`} style={revealStyle}>
       <div className="card-heading-row">
         <div>
-          <p className="eyebrow"><span className="eyebrow-dot" aria-hidden="true" /> LIVE CLOCK · ASIA/SEOUL</p>
+          <p className="card-title">오늘</p>
           <p className="card-subtitle">{status.day.description}</p>
         </div>
         <p className={`day-badge ${DAY_TYPE_TONES[status.day.dayType]}`}>
@@ -100,10 +133,9 @@ export function ClockHero({
       <div className="clock-display" aria-hidden="true">
         <span className="clock-time">{pad(now.hour)}:{pad(now.minute)}</span>
         <span className="clock-seconds">{pad(now.second)}</span>
-        <span className="clock-seconds-label">NOW</span>
       </div>
       <p className="sr-only" role="timer" aria-live="polite" aria-atomic="true">
-        현재 시각 {spokenTime}, {headline.title}
+        현재 시각 {now.hour}시 {now.minute}분, {headline.title}
       </p>
 
       <div className="date-line">
@@ -114,59 +146,71 @@ export function ClockHero({
       </div>
 
       <div
-        className={`countdown-panel countdown-${displayValue ? (focus === 'slot' ? 'focus' : 'waiting') : headline.tone}`}
-        onClick={handleToggleFocus}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleToggleFocus() } }}
-        title={status.phase === 'in-slot' ? '클릭하면 하교까지 / 현재 교시 남은 시간 전환' : undefined}
+        className={`countdown-panel countdown-${focused ? (focus === 'slot' ? 'focus' : 'waiting') : headline.tone}${
+          canToggleFocus ? ' is-interactive' : ''
+        }`}
+        onClick={canToggleFocus ? handleToggleFocus : undefined}
+        role={canToggleFocus ? 'button' : undefined}
+        tabIndex={canToggleFocus ? 0 : undefined}
+        onKeyDown={
+          canToggleFocus
+            ? (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  handleToggleFocus()
+                }
+              }
+            : undefined
+        }
+        title={focusHint}
+        aria-label={focusHint ? `${focused ? focused.title : headline.title} · ${focusHint}` : undefined}
       >
         <div className="countdown-copy">
-          <div className="countdown-icon"><SolarIcon name={displayValue ? (focus === 'slot' ? 'notebook-bold' : 'flag-bold') : headline.icon} size={18} /></div>
+          <div className="countdown-icon">
+            <SolarIcon name={focused ? focused.icon : headline.icon} size={18} />
+          </div>
           <div className="countdown-text">
-            <p className="countdown-kicker">{displayValue ? displayValue.kicker : headline.kicker}</p>
-            <p className="countdown-label">{displayValue ? displayValue.title : headline.title}</p>
-            <p className="countdown-helper">{displayValue ? displayValue.note : headline.helper}</p>
+            <p className="countdown-kicker">{focused ? focused.kicker : headline.kicker}</p>
+            <p className="countdown-label">{focused ? focused.title : headline.title}</p>
+            <p className="countdown-helper">{focused ? focused.note : headline.helper}</p>
           </div>
         </div>
 
         <div className="countdown-readout">
-          <strong className="countdown-value">{displayValue ? displayValue.value : headline.value}</strong>
-          <span className="countdown-note">{displayValue ? (focus === 'slot' ? `하교까지 ${formatPercent(status.dayProgress,0)}%` : headline.valueNote) : headline.valueNote}</span>
+          <strong className="countdown-value">{focused ? focused.value : headline.value}</strong>
+          <span className="countdown-note">{focused ? focused.valueNote : headline.valueNote}</span>
         </div>
 
         <div className="countdown-bar">
           <div
             className="countdown-bar-fill"
-            style={{ '--fill': displayValue ? displayValue.bar / 100 : barFill } as CSSProperties}
+            style={{ '--fill': barFill } as CSSProperties}
             role="progressbar"
             aria-valuemin={0}
             aria-valuemax={100}
-            aria-valuenow={Math.round(displayValue ? displayValue.bar : headline.barProgress)}
+            aria-valuenow={Math.round(barValue)}
             aria-label="오늘 일정 진행률"
           />
-          <span className="countdown-bar-label">{displayValue ? `${Math.round(displayValue.bar)}%` : headline.barLabel}</span>
+          <span className="countdown-bar-label">
+            {focused ? `${formatPercent(focused.bar, 0)}%` : headline.barLabel}
+          </span>
         </div>
       </div>
 
-      {!isOff && (
-        <div className="today-meta" aria-label="오늘 요약">
-          <span className="meta-chip"><SolarIcon name="notebook-bold" size={12} /> <b>{status.totalClassCount}교시</b> 중 {status.remainingClassCount} 남음</span>
-          <span className="meta-chip"><SolarIcon name="stopwatch-bold" size={12} /> 남은 수업 <b>{formatMinutes(status.remainingClassSeconds)}</b></span>
-          <span className="meta-chip"><SolarIcon name="flag-bold" size={12} /> 하교 <b>{dismissalTime}</b></span>
-          <span className="meta-chip accent"><SolarIcon name="round-graph-bold" size={12} /> <b>{formatPercent(status.dayProgress,0)}%</b> 진행</span>
-        </div>
-      )}
-
       <div className="clock-footer">
         <div className="teacher-greeting">
-          <div className="avatar-chip" aria-hidden="true">{avatarInitial(displayName).trim()}</div>
+          <div className="avatar-chip" aria-hidden="true">{avatarInitial(displayName)}</div>
           <div className="teacher-greeting-copy">
-            <span className="muted-label">TODAY'S CREW</span>
             <strong>{displayName || '오늘도 빛나는 선생님'}</strong>
+            <span>{greetingForHour(now.hour)}</span>
           </div>
         </div>
-        <p className="tiny-status"><SolarIcon name="stars-minimalistic-bold" size={13} /> {greetingForHour(now.hour)}</p>
+        {!isOff && (
+          <p className="tiny-status">
+            <SolarIcon name="notebook-bold" size={13} />
+            남은 수업 {status.remainingClassCount}교시 · {formatMinutes(status.remainingClassSeconds)}
+          </p>
+        )}
       </div>
 
       <DayOverrideBar
