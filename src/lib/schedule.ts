@@ -279,6 +279,57 @@ function truncatePeriods(periods: TimetablePeriod[], hardStopSeconds?: number): 
 }
 
 /* ------------------------------------------------------------------ *
+ * Dismissal vs. timetable extent
+ * ------------------------------------------------------------------ */
+
+export interface DismissalConflict {
+  /** School-day weekday whose timetable runs past the dismissal time. */
+  weekday: number
+  /** End of that weekday's last block (seconds since midnight). */
+  lastPeriodEndSeconds: number
+}
+
+/**
+ * Does the configured 하교 시각 get swallowed by a longer timetable?
+ *
+ * `buildOutline` resolves the effective end of the day as
+ * `Math.max(dismissalTime, lastPeriodEnd)`, so a dismissal time entered *before*
+ * the last block simply has no effect — the block wins and the teacher never
+ * sees why. The settings UI asks this function so it can explain the clamp
+ * inline and point at 단축 하교, the per-day escape hatch.
+ */
+export function findDismissalConflict(
+  settings: UserSettings,
+  dismissalTime: string = settings.dismissalTime,
+): DismissalConflict | null {
+  if (!isValidTimeInput(dismissalTime)) {
+    return null
+  }
+
+  const dismissalSeconds = parseTimeToSeconds(dismissalTime)
+  let conflict: DismissalConflict | null = null
+
+  for (const weekday of [...settings.schoolDays].sort((left, right) => left - right)) {
+    const timetable = getDayTimetable(settings, weekday)
+    if (!timetable.enabled) {
+      continue
+    }
+    const lastPeriodEndSeconds = sanitizePeriods(timetable.periods).reduce(
+      (latest, period) => Math.max(latest, parseTimeToSeconds(period.end)),
+      0,
+    )
+    if (
+      lastPeriodEndSeconds > dismissalSeconds &&
+      (conflict === null || lastPeriodEndSeconds > conflict.lastPeriodEndSeconds)
+    ) {
+      conflict = { weekday, lastPeriodEndSeconds }
+    }
+  }
+
+  return conflict
+}
+
+/* ------------------------------------------------------------------ *
  * Day classification
  * ------------------------------------------------------------------ */
 

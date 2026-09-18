@@ -343,7 +343,8 @@ export function TimetableEditor({
       {dismissalTooEarly && (
         <p className="inline-warning">
           <SolarIcon name="info-circle-linear" size={14} />
-          마지막 블록이 {formatHmFromSeconds(lastPeriodEnd)}에 끝나 퇴근 시각({dismissalTime})보다 늦습니다. 타임라인은 마지막 블록 기준으로 표시됩니다.
+          이 요일 마지막 블록이 {formatHmFromSeconds(lastPeriodEnd)}에 끝나 하교 시각({dismissalTime})보다 늦습니다.
+          {/* 고치는 방법(단축 하교 포함)은 설정 상단의 같은 안내가 설명한다. */}
         </p>
       )}
 

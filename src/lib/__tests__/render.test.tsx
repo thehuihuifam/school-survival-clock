@@ -169,6 +169,17 @@ describe('App render', () => {
     expect(html).toContain('16:30 하교 · 수고하셨어요')
   })
 
+  it('does not resurrect today’s finished periods in the next-up rail', () => {
+    const html = renderAt('2026-09-17T09:00:00Z') // 목 18:00 KST, 하교(16:30) 완료
+    const rail = html.split('rail-list')[1]?.split('</ol>')[0] ?? ''
+
+    // 레일은 오늘이 아니라 '내일' 시간표를 미리 보여 준다(D-3).
+    expect(rail).not.toBe('')
+    expect(rail).not.toContain('오늘 ·')
+    expect(rail).toContain('내일 · 09:00')
+    expect(rail).toContain('1교시')
+  })
+
   it('rolls over to the next school day exactly at KST midnight', () => {
     const html = renderAt('2026-09-17T15:00:00Z') // 금요일 00:00 KST
 
