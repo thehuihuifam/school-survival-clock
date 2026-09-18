@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildOutline,
+  findDismissalConflict,
   getDayContext,
   getDayTimetable,
   getNextDayOff,
@@ -76,6 +77,36 @@ describe('buildOutline', () => {
   it('returns an empty outline for disabled or empty timetables', () => {
     expect(buildOutline({ enabled: false, periods: [] }, '16:30').slots).toHaveLength(0)
     expect(buildOutline({ enabled: true, periods: [] }, '16:30').slots).toHaveLength(0)
+  })
+})
+
+describe('findDismissalConflict', () => {
+  it('stays quiet while the dismissal time is after every last block', () => {
+    const settings = settingsWith() // 기본 하교 16:30 · 마지막 교시 14:50(금 13:00)
+    expect(findDismissalConflict(settings)).toBeNull()
+    expect(findDismissalConflict(settings, '15:00')).toBeNull()
+  })
+
+  it('points at the weekday whose timetable runs past the dismissal time', () => {
+    const settings = settingsWith()
+    // 13:00으로 적으면 엔진이 Math.max로 월~목 14:50까지 조용히 늘려 버린다.
+    expect(findDismissalConflict(settings, '13:00')).toEqual({ weekday: 1, lastPeriodEndSeconds: 53400 })
+
+    // 금요일(4교시 · 13:00 종료)만 남기면 금요일이 기준이 된다.
+    for (const weekday of [1, 2, 3, 4]) {
+      settings.timetables[String(weekday)] = { enabled: false, periods: [] }
+    }
+    expect(findDismissalConflict(settings, '12:30')).toEqual({ weekday: 5, lastPeriodEndSeconds: 46800 })
+  })
+
+  it('ignores disabled weekdays and malformed input', () => {
+    const settings = settingsWith()
+    for (const weekday of [1, 2, 3, 4, 5]) {
+      settings.timetables[String(weekday)] = { enabled: false, periods: [] }
+    }
+    expect(findDismissalConflict(settings, '13:00')).toBeNull()
+    expect(findDismissalConflict(settings, '')).toBeNull()
+    expect(findDismissalConflict(settings, '25:99')).toBeNull()
   })
 })
 

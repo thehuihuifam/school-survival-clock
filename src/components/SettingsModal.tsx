@@ -6,10 +6,11 @@ import { HolidayEditor } from './settings/HolidayEditor'
 import { useFocusTrap } from './settings/useFocusTrap'
 import { cloneSettings, createDefaultSettings, parseSettingsJson, serializeSettings } from '../lib/settings'
 import { describeSemesterWindow, getAutoSemesterWindow } from '../lib/semesterWindow'
+import { findDismissalConflict, type DismissalConflict } from '../lib/schedule'
 import { requestNotificationPermission } from '../lib/notify'
 import { chimeEngine } from '../lib/sound'
-import { isValidDateInput, isValidTimeInput, parseDateInput, parseTimeToSeconds } from '../lib/time'
-import { PRE_ALERT_MINUTE_OPTIONS, type ThemeMode, type UserSettings } from '../types'
+import { formatHmFromSeconds, isValidDateInput, isValidTimeInput, parseDateInput, parseTimeToSeconds } from '../lib/time'
+import { PRE_ALERT_MINUTE_OPTIONS, WEEKDAY_LABELS, type ThemeMode, type UserSettings } from '../types'
 import type { NotificationState } from '../lib/notify'
 
 interface SettingsModalProps {
@@ -45,6 +46,28 @@ const SHORTCUTS: Array<{ keys: string; description: string }> = [
   { keys: 'Esc', description: '창 닫기' },
 ]
 
+/**
+ * 하교 시각이 시간표보다 이르게 입력됐을 때의 안내 문구.
+ *
+ * 엔진은 `Math.max(하교 시각, 마지막 교시 종료)`로 조용히 클램프하므로, 이 문장이
+ * 없으면 "왜 저장했는데 하교 시각이 그대로인지" 알 길이 없다.
+ */
+const DISMISSAL_CLAMP_HINT =
+  "하교 시각은 마지막 교시 종료 이후여야 적용됩니다. 하루만 일찍 끝내려면 홈 화면의 '단축 하교'를 사용하세요."
+
+/** 인라인 안내 한 벌 — 프로필 탭과 시간표 탭이 같은 문구를 공유한다. */
+function DismissalClampNotice({ conflict }: { conflict: DismissalConflict }) {
+  return (
+    <p className="inline-warning" role="status">
+      <SolarIcon name="info-circle-linear" size={14} />
+      <span>
+        {WEEKDAY_LABELS[conflict.weekday]}요일 마지막 교시가{' '}
+        {formatHmFromSeconds(conflict.lastPeriodEndSeconds)}에 끝납니다. {DISMISSAL_CLAMP_HINT}
+      </span>
+    </p>
+  )
+}
+
 export function SettingsModal({
   isOpen,
   settings,
@@ -71,6 +94,9 @@ export function SettingsModal({
 
   const issues = useMemo(() => validateDraft(draft), [draft])
   const autoWindow = useMemo(() => getAutoSemesterWindow(todayDateKey), [todayDateKey])
+  // 하교 시각이 마지막 교시 종료보다 이르면 엔진이 그 값을 조용히 마지막 교시로
+  // 늘려 버린다. 저장 전에 이유와 대안을 인라인으로 알려 준다(D-2).
+  const dismissalConflict = useMemo(() => findDismissalConflict(draft), [draft])
 
   if (!isOpen) {
     return null
@@ -245,6 +271,8 @@ export function SettingsModal({
                         required
                       />
                     </Field>
+
+                    {dismissalConflict && <DismissalClampNotice conflict={dismissalConflict} />}
                   </SettingsSection>
 
                   <SettingsSection
@@ -362,6 +390,8 @@ export function SettingsModal({
                   description="교시 이름·구분·시각을 직접 편집할 수 있습니다. 쉬는 시간은 교시 사이 간격에서 자동으로 만들어집니다."
                   icon="notebook-bold"
                 >
+                  {dismissalConflict && <DismissalClampNotice conflict={dismissalConflict} />}
+
                   <TimetableEditor
                     timetables={draft.timetables}
                     schoolDays={draft.schoolDays}

@@ -59,13 +59,15 @@ export function PeriodTracker({ now, status, upcoming, preAlertSeconds }: Period
   const isEmpty = layout.items.length === 0
   const isOffDay = status.phase === 'off-day'
 
-  // 자동 생성된 쉬는 시간은 빼고, 같은 라벨+시간대가 중복으로 들어오는 것도 막는다.
+  // 자동 생성된 쉬는 시간은 빼고, 같은 날짜·라벨·시간대가 중복으로 들어오는 것도
+  // 막는다. 라벨만으로 묶으면 '오늘 1교시'와 '내일 1교시'가 같은 항목으로 보여
+  // 다음 등교일 미리보기가 통째로 사라지므로 dateKey까지 키에 포함한다.
   const filteredUpcoming = useMemo(() => {
     const seen = new Set<string>()
     const result: UpcomingEvent[] = []
     for (const ev of upcoming) {
       if (ev.kind === 'break') continue
-      const key = `${ev.label}-${ev.timeLabel}`
+      const key = `${ev.dateKey}-${ev.label}-${ev.timeLabel}`
       if (seen.has(key)) continue
       seen.add(key)
       result.push(ev)

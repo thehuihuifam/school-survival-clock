@@ -130,6 +130,11 @@ export interface UpcomingEvent {
  * The next few things that will happen: the running block first (if any), then
  * today's remaining blocks. Once the day is over — or on a day off — the list
  * rolls over to the next school day so the card is never empty.
+ *
+ * A day that is already finished is never replayed: the caller (App) hands over
+ * an anchor that already excludes today, and this function refuses a
+ * today-anchored `nextSchoolDay` as well, so a stale anchor can never make the
+ * rail show this morning's timetable as if it were still ahead.
  */
 export function getUpcomingEvents(
   now: KstTimeParts,
@@ -188,8 +193,11 @@ export function getUpcomingEvents(
   }
 
   if (events.length < limit) {
+    // 폴백은 '다음 등교일'만 대상으로 한다. 오늘 날짜가 그대로 넘어오면(하교 직후
+    // 낡은 앵커, 일부 호출부) 이미 끝난 오늘 교시가 남은 일정처럼 되살아나므로
+    // 통째로 건너뛴다(D-3).
     const upcomingDay = nextSchoolDay ?? getNextSchoolDay(now, settings, now.dateKey)
-    if (upcomingDay) {
+    if (upcomingDay && upcomingDay.dateKey !== now.dateKey) {
       const secondsToMidnight = secondsUntilDateKey(now, upcomingDay.dateKey)
       const outline = outlineForDate(settings, upcomingDay.dateKey)
       for (const slot of outline.slots) {
@@ -208,9 +216,10 @@ export function getUpcomingEvents(
           secondsFromNow: startsIn,
           secondsUntilEnd: secondsToMidnight + slot.endSeconds,
           dateKey: upcomingDay.dateKey,
-          isToday: upcomingDay.dateKey === now.dateKey,
+          // 위 가드 덕분에 여기 오는 일정은 언제나 다른 날이다.
+          isToday: false,
           isActive: false,
-          dayLabel: upcomingDay.dateKey === now.dateKey ? '오늘' : upcomingDay.label,
+          dayLabel: upcomingDay.label,
         })
       }
     }

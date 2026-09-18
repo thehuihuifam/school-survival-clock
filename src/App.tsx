@@ -53,9 +53,13 @@ function App() {
     [kstNow.dateKey, settings],
   )
 
+  // 오늘의 수업이 끝났거나(하교 완료) 애초에 없는 날이면 앵커를 '내일 이후의
+  // 등교일'로 밀어 둔다. 오늘을 그대로 앵커로 넘기면 NEXT UP 레일의 폴백이 이미
+  // 지나간 오늘 시간표를 다시 채워 지난 교시를 "9시간 후"로 되살린다(D-3).
+  const isTodayFinished = status.phase === 'dismissed' || !status.day.hasClasses
   const nextSchoolDayAnchor = useMemo(
-    () => getNextSchoolDay(kstNow, settings),
-    [kstNow.dateKey, settings],
+    () => getNextSchoolDay(kstNow, settings, isTodayFinished ? kstNow.dateKey : undefined),
+    [kstNow.dateKey, settings, isTodayFinished],
   )
 
   const nextSchoolDay = useMemo<NextSchoolDay | null>(() => {
